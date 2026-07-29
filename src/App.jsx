@@ -43,7 +43,8 @@ function App() {
       sessionStorage.setItem('presentationCues', JSON.stringify(cues))
       sessionStorage.setItem('showTimeRemaining', JSON.stringify(showTimeRemaining))
 
-      const timerUrl = `${window.location.origin}/timer.html`
+      const basePath = import.meta.env.BASE_URL
+      const timerUrl = `${window.location.origin}${basePath}timer.html`
       const newWindow = window.open(timerUrl, 'timer', 'width=1200,height=800')
       setTimerWindow(newWindow)
       setCurrentCueIndex(0)
