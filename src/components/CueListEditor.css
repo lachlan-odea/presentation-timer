@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
   padding: 20px 30px;
+  background: #1f3541;
 }
 
 .add-cue {
@@ -15,16 +16,22 @@
 .add-cue input {
   flex: 1;
   padding: 12px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #371EE1;
   border-radius: 6px;
   font-size: 14px;
   transition: border-color 0.3s;
+  background: #244349;
+  color: #ABE7F8;
+}
+
+.add-cue input::placeholder {
+  color: #73D7F4;
 }
 
 .add-cue input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #73D7F4;
+  box-shadow: 0 0 0 3px rgba(115, 215, 244, 0.2);
 }
 
 .add-cue input[placeholder='MM:SS'] {
@@ -32,7 +39,7 @@
 }
 
 .add-cue button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #371EE1 0%, #5D3FD3 100%);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -46,12 +53,12 @@
 
 .add-cue button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 5px 15px rgba(55, 30, 225, 0.4);
 }
 
 .empty-state {
   text-align: center;
-  color: #999;
+  color: #73D7F4;
   padding: 40px 20px;
   font-style: italic;
 }
@@ -67,17 +74,17 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: #f9f9f9;
-  border: 2px solid #e0e0e0;
+  background: #244349;
+  border: 2px solid #371EE1;
   border-radius: 8px;
   transition: all 0.3s;
   cursor: move;
 }
 
 .cue-item:hover {
-  background: #f5f5f5;
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  background: #2a4f57;
+  border-color: #73D7F4;
+  box-shadow: 0 4px 12px rgba(55, 30, 225, 0.2);
 }
 
 .cue-item.dragging {
@@ -98,7 +105,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #371EE1 0%, #5D3FD3 100%);
   color: white;
   border-radius: 50%;
   font-weight: 600;
@@ -115,38 +122,40 @@
   display: block;
   width: 100%;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid #371EE1;
   border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 6px;
   font-family: inherit;
-  color: #333;
+  color: #FFFFFF;
+  background: #1f3541;
 }
 
 .cue-title:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: #73D7F4;
+  box-shadow: 0 0 0 2px rgba(115, 215, 244, 0.2);
 }
 
 .cue-speaker {
   display: block;
   width: 100%;
   padding: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid #371EE1;
   border-radius: 4px;
   font-size: 12px;
   margin-bottom: 6px;
   font-family: inherit;
-  color: #666;
+  color: #ABE7F8;
   font-style: italic;
+  background: #1f3541;
 }
 
 .cue-speaker:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: #73D7F4;
+  box-shadow: 0 0 0 2px rgba(115, 215, 244, 0.2);
 }
 
 .cue-time {
@@ -158,19 +167,20 @@
 .time-input {
   width: 75px;
   padding: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid #371EE1;
   border-radius: 4px;
   font-size: 13px;
-  font-family: monospace;
+  font-family: 'DM Mono', monospace;
   font-weight: 600;
-  color: #667eea;
+  color: #73D7F4;
   text-align: center;
+  background: #1f3541;
 }
 
 .time-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: #73D7F4;
+  box-shadow: 0 0 0 2px rgba(115, 215, 244, 0.2);
 }
 
 .cue-actions {
@@ -190,13 +200,14 @@
 }
 
 .btn-move {
-  background: #e8eaf6;
-  color: #667eea;
+  background: rgba(115, 215, 244, 0.2);
+  color: #73D7F4;
+  border: 1px solid #73D7F4;
 }
 
 .btn-move:hover:not(:disabled) {
-  background: #667eea;
-  color: white;
+  background: #73D7F4;
+  color: #244349;
 }
 
 .btn-move:disabled {
@@ -205,13 +216,14 @@
 }
 
 .btn-delete {
-  background: #ffebee;
-  color: #c62828;
+  background: rgba(198, 255, 209, 0.2);
+  color: #C6FFD1;
+  border: 1px solid #C6FFD1;
 }
 
 .btn-delete:hover {
-  background: #c62828;
-  color: white;
+  background: #C6FFD1;
+  color: #244349;
 }
 
 @media (max-width: 600px) {

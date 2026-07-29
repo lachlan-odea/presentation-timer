@@ -1,13 +1,13 @@
 .timer-view {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0F2A46 0%, #244349 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px;
   color: white;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 .timer-main {
@@ -37,24 +37,27 @@
 .timer-display {
   font-size: 120px;
   font-weight: 700;
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: 'DM Mono', 'Monaco', 'Courier New', monospace;
   margin-bottom: 30px;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   transition: color 0.3s ease;
   letter-spacing: 10px;
+  color: #73D7F4;
 }
 
 .progress-bar {
   height: 8px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(55, 30, 225, 0.2);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 30px;
+  border: 1px solid #371EE1;
 }
 
 .progress-fill {
   height: 100%;
   transition: width 1s linear;
+  background: linear-gradient(90deg, #371EE1 0%, #73D7F4 100%);
 }
 
 @keyframes pulse-overtime {
@@ -112,10 +115,10 @@
 }
 
 .timer-controls button:hover:not(:disabled) {
-  background: white;
-  color: #667eea;
+  background: #73D7F4;
+  color: #0F2A46;
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 20px rgba(115, 215, 244, 0.3);
 }
 
 .timer-controls button:disabled {
@@ -129,22 +132,24 @@
 }
 
 .btn-end {
-  background: rgba(244, 67, 54, 0.3);
-  border-color: #f44336;
+  background: rgba(198, 255, 209, 0.3);
+  border-color: #C6FFD1;
 }
 
 .btn-end:hover:not(:disabled) {
-  background: #f44336;
+  background: #C6FFD1;
+  color: #0F2A46;
 }
 
 .cue-list-mini {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(55, 30, 225, 0.15);
   border-radius: 12px;
   padding: 20px;
   max-width: 600px;
   width: 100%;
   max-height: 200px;
   overflow-y: auto;
+  border: 1px solid #371EE1;
 }
 
 .cue-list-mini h3 {
@@ -167,10 +172,10 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(115, 215, 244, 0.1);
   border: 2px solid transparent;
   border-radius: 6px;
-  color: white;
+  color: #ABE7F8;
   cursor: pointer;
   transition: all 0.3s;
   text-align: left;
@@ -181,14 +186,14 @@
 }
 
 .mini-cue:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: white;
+  background: rgba(115, 215, 244, 0.2);
+  border-color: #73D7F4;
 }
 
 .mini-cue.active {
-  background: white;
-  color: #667eea;
-  border-color: white;
+  background: #73D7F4;
+  color: #0F2A46;
+  border-color: #73D7F4;
   font-weight: 600;
 }
 
@@ -198,7 +203,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(115, 215, 244, 0.2);
   border-radius: 50%;
   font-size: 12px;
   font-weight: 600;
@@ -206,8 +211,8 @@
 }
 
 .mini-cue.active .mini-cue-num {
-  background: #667eea;
-  color: white;
+  background: #0F2A46;
+  color: #73D7F4;
 }
 
 .mini-cue-info {
@@ -236,7 +241,7 @@
 }
 
 .mini-cue-time {
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: 'DM Mono', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
   opacity: 0.8;
   flex-shrink: 0;
