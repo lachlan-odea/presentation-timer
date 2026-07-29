@@ -109,28 +109,6 @@ function Timer({
         </button>
       </div>
 
-      <div className="cue-list-mini">
-        <h3>Cues</h3>
-        <div className="mini-cues">
-          {cues.map((cue, index) => (
-            <button
-              key={cue.id}
-              className={`mini-cue ${index === currentCueIndex ? 'active' : ''}`}
-              onClick={() => {
-                onJumpToCue(index)
-                setElapsed(0)
-              }}
-            >
-              <span className="mini-cue-num">{index + 1}</span>
-              <span className="mini-cue-info">
-                <span className="mini-cue-title">{cue.title}</span>
-                {cue.speaker && <span className="mini-cue-speaker">{cue.speaker}</span>}
-              </span>
-              <span className="mini-cue-time">{formatTime(cue.seconds)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

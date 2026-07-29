@@ -18,18 +18,19 @@
 }
 
 .cue-title {
-  font-size: 32px;
+  font-size: 56px;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   word-break: break-word;
   color: #E5E5E5;
+  line-height: 1.2;
 }
 
 .cue-speaker-display {
-  font-size: 18px;
+  font-size: 32px;
   font-weight: 500;
-  margin-bottom: 25px;
+  margin-bottom: 40px;
   opacity: 0.8;
   font-style: italic;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -37,14 +38,15 @@
 }
 
 .timer-display {
-  font-size: 120px;
+  font-size: 220px;
   font-weight: 700;
   font-family: 'DM Mono', 'Monaco', 'Courier New', monospace;
   margin-bottom: 30px;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   transition: color 0.3s ease;
-  letter-spacing: 10px;
+  letter-spacing: 12px;
   color: #FFFFFF;
+  line-height: 0.9;
 }
 
 .progress-bar {
@@ -77,20 +79,20 @@
 }
 
 .cue-info {
-  font-size: 16px;
-  margin-bottom: 20px;
+  font-size: 28px;
+  margin-bottom: 30px;
   color: #B0B0B0;
 }
 
 .cue-position {
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   opacity: 0.95;
   color: #E5E5E5;
 }
 
 .next-cue {
-  font-size: 14px;
+  font-size: 24px;
   opacity: 0.8;
   font-style: italic;
   color: #B0B0B0;
@@ -98,15 +100,15 @@
 
 .timer-controls {
   display: flex;
-  gap: 15px;
-  margin-bottom: 40px;
+  gap: 12px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .timer-controls button {
-  padding: 15px 30px;
-  font-size: 16px;
+  padding: 12px 24px;
+  font-size: 14px;
   font-weight: 600;
   border: 2px solid #4A4A4A;
   background: rgba(255, 255, 255, 0.05);
@@ -114,9 +116,9 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
-  min-width: 120px;
+  min-width: 100px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .timer-controls button:hover:not(:disabled) {
@@ -134,7 +136,7 @@
 
 .btn-play-pause {
   font-size: 24px;
-  padding: 15px 25px;
+  padding: 12px 20px;
 }
 
 .btn-end {
@@ -260,12 +262,16 @@
 /* Responsive */
 @media (max-width: 600px) {
   .timer-display {
-    font-size: 72px;
+    font-size: 96px;
     letter-spacing: 5px;
   }
 
   .cue-title {
-    font-size: 24px;
+    font-size: 36px;
+  }
+
+  .cue-speaker-display {
+    font-size: 22px;
   }
 
   .timer-controls {
@@ -276,19 +282,5 @@
     padding: 12px 20px;
     font-size: 14px;
     min-width: 100px;
-  }
-
-  .cue-list-mini {
-    max-height: 150px;
-  }
-
-  .mini-cue {
-    font-size: 12px;
-    padding: 8px 10px;
-  }
-
-  .mini-cue-num {
-    min-width: 24px;
-    height: 24px;
   }
 }
