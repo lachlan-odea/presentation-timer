@@ -253,3 +253,19 @@
   border-color: #5A5A5A;
   font-weight: 600;
 }
+
+.timer-display-small {
+  font-size: 72px;
+  font-weight: 700;
+  font-family: 'DM Mono', 'Monaco', 'Courier New', monospace;
+  letter-spacing: 8px;
+  color: #FFFFFF;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin-top: 20px;
+  line-height: 0.9;
+}
+
+.btn-play-pause {
+  background: rgba(90, 90, 90, 0.3) !important;
+  border-color: #5A5A5A !important;
+}

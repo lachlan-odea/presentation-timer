@@ -10,6 +10,8 @@ function App() {
   const [isPresenting, setIsPresenting] = useState(false)
   const [showTimeRemaining, setShowTimeRemaining] = useState(true)
   const [timerWindow, setTimerWindow] = useState(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [isRunning, setIsRunning] = useState(true)
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -21,6 +23,20 @@ function App() {
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [])
+
+  useEffect(() => {
+    setElapsed(0)
+  }, [currentCueIndex])
+
+  useEffect(() => {
+    if (!isPresenting || !isRunning) return
+
+    const timer = setInterval(() => {
+      setElapsed((prev) => prev + 1)
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [isPresenting, isRunning])
 
   const startPresentation = () => {
     if (cues.length > 0) {
@@ -69,6 +85,34 @@ function App() {
     if (timerWindow && !timerWindow.closed) {
       timerWindow.postMessage({ type: 'CUE_CHANGED', index }, '*')
     }
+  }
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const getDisplayTime = () => {
+    if (currentCueIndex === null || !cues[currentCueIndex]) return 0
+    const currentCue = cues[currentCueIndex]
+    const isOvertime = elapsed >= currentCue.seconds
+    if (isOvertime) {
+      return elapsed - currentCue.seconds
+    }
+    return showTimeRemaining ? currentCue.seconds - elapsed : elapsed
+  }
+
+  const getTimeColor = () => {
+    if (currentCueIndex === null || !cues[currentCueIndex]) return '#FFFFFF'
+    const currentCue = cues[currentCueIndex]
+    const isOvertime = elapsed >= currentCue.seconds
+    if (isOvertime) return '#FF5252'
+    const displayTime = getDisplayTime()
+    const remainingPercent = (displayTime / currentCue.seconds) * 100
+    if (remainingPercent > 50) return '#FFFFFF'
+    if (remainingPercent > 25) return '#FFB74D'
+    return '#FF5252'
   }
 
   const exportCues = () => {
@@ -172,11 +216,18 @@ function App() {
         </div>
       ) : (
         <div className="presentation-controls">
+          <div className="timer-display-small" style={{ color: getTimeColor() }}>
+            {elapsed >= (cues[currentCueIndex]?.seconds || 0) ? '+' : ''}
+            {formatTime(getDisplayTime())}
+          </div>
           <div className="controls-header">
             <h2>Presentation Controls</h2>
             <p>{currentCueIndex !== null && cues[currentCueIndex]?.title}</p>
           </div>
           <div className="controls-buttons">
+            <button onClick={() => setIsRunning(!isRunning)} className="btn-play-pause">
+              {isRunning ? '⏸ Pause' : '▶ Play'}
+            </button>
             <button onClick={moveToPreviousCue} disabled={currentCueIndex === 0}>
               ← Previous
             </button>
