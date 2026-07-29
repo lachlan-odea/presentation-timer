@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import CueListEditor from './components/CueListEditor'
 import Timer from './components/Timer'
+import { parseRunsheet } from './utils/runsheetParser'
 
 function App() {
   const [cues, setCues] = useState([])
@@ -67,6 +68,21 @@ function App() {
     }
   }
 
+  const importRunsheet = async (event) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      try {
+        const imported = await parseRunsheet(file)
+        if (Array.isArray(imported)) {
+          setCues(imported)
+          setCurrentCueIndex(null)
+        }
+      } catch (err) {
+        alert(err.message)
+      }
+    }
+  }
+
   return (
     <div className="app">
       {!isPresenting ? (
@@ -78,11 +94,20 @@ function App() {
                 Export
               </button>
               <label className="import-label">
-                Import
+                Import (JSON)
                 <input
                   type="file"
                   accept=".json"
                   onChange={importCues}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              <label className="import-label">
+                Import Runsheet
+                <input
+                  type="file"
+                  accept=".docx"
+                  onChange={importRunsheet}
                   style={{ display: 'none' }}
                 />
               </label>
