@@ -8,12 +8,18 @@ function CueListEditor({ cues, setCues }) {
   const [draggedIndex, setDraggedIndex] = useState(null)
 
   const parseTimeInput = (input) => {
-    const parts = input.split(':')
+    if (!input || typeof input !== 'string') return null
+
+    const trimmed = input.trim()
+    const parts = trimmed.split(':')
+
     if (parts.length === 2) {
       const mins = parseInt(parts[0], 10)
       const secs = parseInt(parts[1], 10)
-      if (!isNaN(mins) && !isNaN(secs) && secs < 60) {
-        return Math.max(1, mins * 60 + secs)
+
+      if (!isNaN(mins) && !isNaN(secs) && mins >= 0 && secs >= 0 && secs < 60) {
+        const totalSeconds = mins * 60 + secs
+        return Math.max(1, totalSeconds)
       }
     }
     return null
