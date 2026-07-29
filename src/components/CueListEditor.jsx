@@ -6,6 +6,8 @@ function CueListEditor({ cues, setCues }) {
   const [newCueSpeaker, setNewCueSpeaker] = useState('')
   const [newCueTime, setNewCueTime] = useState('01:00')
   const [draggedIndex, setDraggedIndex] = useState(null)
+  const [editingTimeIndex, setEditingTimeIndex] = useState(-1)
+  const [editingTimeValue, setEditingTimeValue] = useState('')
 
   const parseTimeInput = (input) => {
     if (!input || typeof input !== 'string') return null
@@ -163,8 +165,20 @@ function CueListEditor({ cues, setCues }) {
                   <div className="cue-time">
                     <input
                       type="text"
-                      value={formatTimeInput(cue.seconds)}
-                      onChange={(e) => updateCue(index, 'seconds', e.target.value)}
+                      value={editingTimeIndex === index ? editingTimeValue : formatTimeInput(cue.seconds)}
+                      onFocus={() => {
+                        setEditingTimeIndex(index)
+                        setEditingTimeValue(formatTimeInput(cue.seconds))
+                      }}
+                      onChange={(e) => setEditingTimeValue(e.target.value)}
+                      onBlur={() => {
+                        const seconds = parseTimeInput(editingTimeValue)
+                        if (seconds !== null) {
+                          updateCue(index, 'seconds', editingTimeValue)
+                        }
+                        setEditingTimeIndex(-1)
+                        setEditingTimeValue('')
+                      }}
                       className="time-input"
                       maxLength="5"
                       placeholder="MM:SS"
