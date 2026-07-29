@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   padding: 20px 30px;
-  background: #1f3541;
+  background: #1A1A1A;
 }
 
 .add-cue {
@@ -16,22 +16,22 @@
 .add-cue input {
   flex: 1;
   padding: 12px;
-  border: 2px solid #371EE1;
+  border: 2px solid #3A3A3A;
   border-radius: 6px;
   font-size: 14px;
   transition: border-color 0.3s;
-  background: #244349;
-  color: #ABE7F8;
+  background: #242424;
+  color: #E5E5E5;
 }
 
 .add-cue input::placeholder {
-  color: #73D7F4;
+  color: #707070;
 }
 
 .add-cue input:focus {
   outline: none;
-  border-color: #73D7F4;
-  box-shadow: 0 0 0 3px rgba(115, 215, 244, 0.2);
+  border-color: #5A5A5A;
+  box-shadow: 0 0 0 3px rgba(90, 90, 90, 0.2);
 }
 
 .add-cue input[placeholder='MM:SS'] {
@@ -39,9 +39,9 @@
 }
 
 .add-cue button {
-  background: linear-gradient(135deg, #371EE1 0%, #5D3FD3 100%);
-  color: white;
-  border: none;
+  background: #3A3A3A;
+  color: #E5E5E5;
+  border: 2px solid #4A4A4A;
   padding: 12px 24px;
   border-radius: 6px;
   font-size: 14px;
@@ -53,12 +53,14 @@
 
 .add-cue button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(55, 30, 225, 0.4);
+  background: #454545;
+  border-color: #5A5A5A;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .empty-state {
   text-align: center;
-  color: #73D7F4;
+  color: #707070;
   padding: 40px 20px;
   font-style: italic;
 }
@@ -74,17 +76,17 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: #244349;
-  border: 2px solid #371EE1;
+  background: #242424;
+  border: 2px solid #3A3A3A;
   border-radius: 8px;
   transition: all 0.3s;
   cursor: move;
 }
 
 .cue-item:hover {
-  background: #2a4f57;
-  border-color: #73D7F4;
-  box-shadow: 0 4px 12px rgba(55, 30, 225, 0.2);
+  background: #2D2D2D;
+  border-color: #4A4A4A;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .cue-item.dragging {
@@ -105,12 +107,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #371EE1 0%, #5D3FD3 100%);
-  color: white;
+  background: #3A3A3A;
+  color: #E5E5E5;
   border-radius: 50%;
   font-weight: 600;
   font-size: 14px;
   flex-shrink: 0;
+  border: 2px solid #4A4A4A;
 }
 
 .cue-details {
@@ -122,40 +125,40 @@
   display: block;
   width: 100%;
   padding: 8px;
-  border: 1px solid #371EE1;
+  border: 1px solid #3A3A3A;
   border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 6px;
   font-family: inherit;
-  color: #FFFFFF;
-  background: #1f3541;
+  color: #E5E5E5;
+  background: #1A1A1A;
 }
 
 .cue-title:focus {
   outline: none;
-  border-color: #73D7F4;
-  box-shadow: 0 0 0 2px rgba(115, 215, 244, 0.2);
+  border-color: #5A5A5A;
+  box-shadow: 0 0 0 2px rgba(90, 90, 90, 0.2);
 }
 
 .cue-speaker {
   display: block;
   width: 100%;
   padding: 6px;
-  border: 1px solid #371EE1;
+  border: 1px solid #3A3A3A;
   border-radius: 4px;
   font-size: 12px;
   margin-bottom: 6px;
   font-family: inherit;
-  color: #ABE7F8;
+  color: #B0B0B0;
   font-style: italic;
-  background: #1f3541;
+  background: #1A1A1A;
 }
 
 .cue-speaker:focus {
   outline: none;
-  border-color: #73D7F4;
-  box-shadow: 0 0 0 2px rgba(115, 215, 244, 0.2);
+  border-color: #5A5A5A;
+  box-shadow: 0 0 0 2px rgba(90, 90, 90, 0.2);
 }
 
 .cue-time {
@@ -167,20 +170,20 @@
 .time-input {
   width: 75px;
   padding: 6px;
-  border: 1px solid #371EE1;
+  border: 1px solid #3A3A3A;
   border-radius: 4px;
   font-size: 13px;
   font-family: 'DM Mono', monospace;
   font-weight: 600;
-  color: #73D7F4;
+  color: #B0B0B0;
   text-align: center;
-  background: #1f3541;
+  background: #1A1A1A;
 }
 
 .time-input:focus {
   outline: none;
-  border-color: #73D7F4;
-  box-shadow: 0 0 0 2px rgba(115, 215, 244, 0.2);
+  border-color: #5A5A5A;
+  box-shadow: 0 0 0 2px rgba(90, 90, 90, 0.2);
 }
 
 .cue-actions {
@@ -191,7 +194,7 @@
 .btn-move,
 .btn-delete {
   padding: 6px 10px;
-  border: none;
+  border: 2px solid;
   border-radius: 4px;
   font-size: 14px;
   cursor: pointer;
@@ -200,14 +203,14 @@
 }
 
 .btn-move {
-  background: rgba(115, 215, 244, 0.2);
-  color: #73D7F4;
-  border: 1px solid #73D7F4;
+  background: rgba(90, 90, 90, 0.2);
+  color: #B0B0B0;
+  border-color: #4A4A4A;
 }
 
 .btn-move:hover:not(:disabled) {
-  background: #73D7F4;
-  color: #244349;
+  background: #4A4A4A;
+  color: #E5E5E5;
 }
 
 .btn-move:disabled {
@@ -216,14 +219,14 @@
 }
 
 .btn-delete {
-  background: rgba(198, 255, 209, 0.2);
-  color: #C6FFD1;
-  border: 1px solid #C6FFD1;
+  background: rgba(100, 100, 100, 0.2);
+  color: #D0D0D0;
+  border-color: #5A5A5A;
 }
 
 .btn-delete:hover {
-  background: #C6FFD1;
-  color: #244349;
+  background: #5A5A5A;
+  color: #1A1A1A;
 }
 
 @media (max-width: 600px) {
