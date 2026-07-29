@@ -9,33 +9,66 @@ function App() {
   const [currentCueIndex, setCurrentCueIndex] = useState(null)
   const [isPresenting, setIsPresenting] = useState(false)
   const [showTimeRemaining, setShowTimeRemaining] = useState(true)
+  const [timerWindow, setTimerWindow] = useState(null)
+
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data.type === 'TIMER_CLOSED') {
+        setIsPresenting(false)
+        setCurrentCueIndex(null)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   const startPresentation = () => {
     if (cues.length > 0) {
+      sessionStorage.setItem('presentationCues', JSON.stringify(cues))
+      sessionStorage.setItem('showTimeRemaining', JSON.stringify(showTimeRemaining))
+
+      const timerUrl = `${window.location.origin}/timer.html`
+      const newWindow = window.open(timerUrl, 'timer', 'width=1200,height=800')
+      setTimerWindow(newWindow)
       setCurrentCueIndex(0)
       setIsPresenting(true)
     }
   }
 
   const endPresentation = () => {
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.close()
+    }
     setIsPresenting(false)
     setCurrentCueIndex(null)
+    setTimerWindow(null)
   }
 
   const moveToNextCue = () => {
     if (currentCueIndex !== null && currentCueIndex < cues.length - 1) {
-      setCurrentCueIndex(currentCueIndex + 1)
+      const newIndex = currentCueIndex + 1
+      setCurrentCueIndex(newIndex)
+      if (timerWindow && !timerWindow.closed) {
+        timerWindow.postMessage({ type: 'CUE_CHANGED', index: newIndex }, '*')
+      }
     }
   }
 
   const moveToPreviousCue = () => {
     if (currentCueIndex !== null && currentCueIndex > 0) {
-      setCurrentCueIndex(currentCueIndex - 1)
+      const newIndex = currentCueIndex - 1
+      setCurrentCueIndex(newIndex)
+      if (timerWindow && !timerWindow.closed) {
+        timerWindow.postMessage({ type: 'CUE_CHANGED', index: newIndex }, '*')
+      }
     }
   }
 
   const jumpToCue = (index) => {
     setCurrentCueIndex(index)
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'CUE_CHANGED', index }, '*')
+    }
   }
 
   const exportCues = () => {
@@ -138,15 +171,35 @@ function App() {
           </div>
         </div>
       ) : (
-        <Timer
-          cues={cues}
-          currentCueIndex={currentCueIndex}
-          onNextCue={moveToNextCue}
-          onPreviousCue={moveToPreviousCue}
-          onJumpToCue={jumpToCue}
-          onEnd={endPresentation}
-          showTimeRemaining={showTimeRemaining}
-        />
+        <div className="presentation-controls">
+          <div className="controls-header">
+            <h2>Presentation Controls</h2>
+            <p>{currentCueIndex !== null && cues[currentCueIndex]?.title}</p>
+          </div>
+          <div className="controls-buttons">
+            <button onClick={moveToPreviousCue} disabled={currentCueIndex === 0}>
+              ← Previous
+            </button>
+            <button onClick={moveToNextCue} disabled={currentCueIndex === cues.length - 1}>
+              Next →
+            </button>
+            <button onClick={endPresentation} className="btn-end">
+              End Presentation
+            </button>
+          </div>
+          <div className="cue-info-panel">
+            <h3>Cues</h3>
+            {cues.map((cue, index) => (
+              <button
+                key={index}
+                className={`cue-button ${index === currentCueIndex ? 'active' : ''}`}
+                onClick={() => jumpToCue(index)}
+              >
+                {index + 1}. {cue.title} ({Math.floor(cue.seconds / 60)}:{(cue.seconds % 60).toString().padStart(2, '0')})
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
