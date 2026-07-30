@@ -14,6 +14,9 @@ function App() {
   const [isRunning, setIsRunning] = useState(true)
   const [messageText, setMessageText] = useState('')
   const [currentMessage, setCurrentMessage] = useState('')
+  const [isMessageVisibleOnTimer, setIsMessageVisibleOnTimer] = useState(true)
+  const [messages, setMessages] = useState([])
+  const [newMessageText, setNewMessageText] = useState('')
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -123,6 +126,19 @@ function App() {
       timerWindow.postMessage({ type: 'MESSAGE', text: messageText }, '*')
       setCurrentMessage(messageText)
       setMessageText('')
+      setIsMessageVisibleOnTimer(true)
+    }
+  }
+
+  const toggleMessageVisibility = () => {
+    const newVisibility = !isMessageVisibleOnTimer
+    setIsMessageVisibleOnTimer(newVisibility)
+    if (timerWindow && !timerWindow.closed) {
+      if (newVisibility) {
+        timerWindow.postMessage({ type: 'MESSAGE', text: currentMessage }, '*')
+      } else {
+        timerWindow.postMessage({ type: 'CLEAR_MESSAGE' }, '*')
+      }
     }
   }
 
@@ -131,6 +147,26 @@ function App() {
       timerWindow.postMessage({ type: 'CLEAR_MESSAGE' }, '*')
     }
     setCurrentMessage('')
+    setIsMessageVisibleOnTimer(false)
+  }
+
+  const addMessage = () => {
+    if (newMessageText.trim()) {
+      setMessages([...messages, newMessageText])
+      setNewMessageText('')
+    }
+  }
+
+  const deleteMessage = (index) => {
+    setMessages(messages.filter((_, i) => i !== index))
+  }
+
+  const usePrePopulatedMessage = (message) => {
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'MESSAGE', text: message }, '*')
+      setCurrentMessage(message)
+      setIsMessageVisibleOnTimer(true)
+    }
   }
 
   const toggleTimer = () => {
@@ -188,116 +224,110 @@ function App() {
 
   return (
     <div className="app">
-      {!isPresenting ? (
-        <div className="editor-view">
-          <div className="header">
-            <h1>Presentation Timer</h1>
-            <div className="export-import">
-              <button onClick={exportCues} disabled={cues.length === 0}>
-                Export
-              </button>
-              <label className="import-label">
-                Import (JSON)
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={importCues}
-                  style={{ display: 'none' }}
-                />
-              </label>
-              <label className="import-label">
-                Import Runsheet
-                <input
-                  type="file"
-                  accept=".docx"
-                  onChange={importRunsheet}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
-          </div>
-
-          <CueListEditor cues={cues} setCues={setCues} />
-
-          <div className="settings">
-            <label>
-              <input
-                type="checkbox"
-                checked={showTimeRemaining}
-                onChange={(e) => setShowTimeRemaining(e.target.checked)}
-              />
-              Show time remaining (vs elapsed)
-            </label>
-          </div>
-
-          <div className="actions">
-            <button
-              onClick={startPresentation}
-              disabled={cues.length === 0}
-              className="btn-primary"
-            >
-              Start Presentation
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="dashboard">
-          <div className="dashboard-header">
-            <div className="header-content">
-              <h1>Presentation Dashboard</h1>
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <div className="header-content">
+            <h1>Presentation Dashboard</h1>
+            {isPresenting ? (
               <div className="header-status">
                 <span className="status-badge">Live</span>
                 <span className="cue-counter">Cue {currentCueIndex !== null ? currentCueIndex + 1 : 0} of {cues.length}</span>
               </div>
-            </div>
-            <button onClick={endPresentation} className="btn-end-presentation">
-              End Presentation
-            </button>
+            ) : (
+              <span className="header-subtitle">Edit & Manage Cues</span>
+            )}
           </div>
-
-          <div className="dashboard-container">
-            <aside className="sidebar-left">
-              <div className="timer-section">
-                <div className="timer-display" style={{ color: getTimeColor() }}>
-                  {elapsed >= (cues[currentCueIndex]?.seconds || 0) ? '+' : ''}
-                  {formatTime(getDisplayTime())}
-                </div>
-                <div className="timer-label">
-                  {showTimeRemaining ? 'Remaining' : 'Elapsed'}
-                </div>
-              </div>
-
-              <div className="cue-info-section">
-                <div className="current-cue">
-                  <h3>Now Playing</h3>
-                  <div className="cue-details">
-                    <p className="cue-title">{currentCueIndex !== null && cues[currentCueIndex]?.title}</p>
-                    <p className="cue-speaker">{currentCueIndex !== null && cues[currentCueIndex]?.speaker}</p>
-                  </div>
-                </div>
-
-                {currentCueIndex !== null && currentCueIndex < cues.length - 1 && (
-                  <div className="next-cue">
-                    <h4>Next</h4>
-                    <p className="next-cue-title">{cues[currentCueIndex + 1]?.title}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="controls-section">
-                <button onClick={toggleTimer} className="btn-control btn-play-pause">
-                  {isRunning ? '⏸ Pause' : '▶ Play'}
+          <div className="header-actions">
+            {isPresenting ? (
+              <button onClick={endPresentation} className="btn-end-presentation">
+                End Presentation
+              </button>
+            ) : (
+              <>
+                <button onClick={exportCues} disabled={cues.length === 0} className="btn-header-action">
+                  Export
                 </button>
-                <button onClick={moveToPreviousCue} disabled={currentCueIndex === 0} className="btn-control">
-                  ← Previous
+                <label className="import-label">
+                  Import JSON
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={importCues}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                <label className="import-label">
+                  Import Runsheet
+                  <input
+                    type="file"
+                    accept=".docx"
+                    onChange={importRunsheet}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                <button
+                  onClick={startPresentation}
+                  disabled={cues.length === 0}
+                  className="btn-start-presentation"
+                >
+                  Start Presentation
                 </button>
-                <button onClick={moveToNextCue} disabled={currentCueIndex === cues.length - 1} className="btn-control">
-                  Next →
-                </button>
-              </div>
-            </aside>
+              </>
+            )}
+          </div>
+        </div>
 
-            <main className="dashboard-center">
+        <div className="dashboard-container">
+          <aside className="sidebar-left">
+            <div className="timer-preview-section">
+              <div className="preview-timer" style={{ color: isPresenting ? getTimeColor() : '#FFFFFF' }}>
+                {isPresenting
+                  ? (elapsed >= (cues[currentCueIndex]?.seconds || 0) ? '+' : '') + formatTime(getDisplayTime())
+                  : (cues.length > 0 ? formatTime(cues[0]?.seconds || 0) : '0:00')
+                }
+              </div>
+              {cues.length > 0 && (
+                <>
+                  <p className="preview-title">
+                    {isPresenting && currentCueIndex !== null ? cues[currentCueIndex]?.title : cues[0]?.title}
+                  </p>
+                  <p className="preview-speaker">
+                    {isPresenting && currentCueIndex !== null ? cues[currentCueIndex]?.speaker : cues[0]?.speaker}
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="condensed-controls-section">
+              <button
+                onClick={toggleTimer}
+                className="btn-control-mini btn-play-pause"
+                disabled={!isPresenting}
+                title={isRunning ? 'Pause' : 'Play'}
+              >
+                {isRunning ? '⏸' : '▶'}
+              </button>
+              <button
+                onClick={moveToPreviousCue}
+                className="btn-control-mini"
+                disabled={!isPresenting || currentCueIndex === 0}
+                title="Previous"
+              >
+                ←
+              </button>
+              <button
+                onClick={moveToNextCue}
+                className="btn-control-mini"
+                disabled={!isPresenting || currentCueIndex === cues.length - 1}
+                title="Next"
+              >
+                →
+              </button>
+            </div>
+          </aside>
+
+          <main className="dashboard-center">
+            {isPresenting ? (
               <div className="agenda-section">
                 <h2>Agenda</h2>
                 <div className="agenda-list">
@@ -319,9 +349,16 @@ function App() {
                   ))}
                 </div>
               </div>
-            </main>
+            ) : (
+              <div className="editor-section">
+                <h2>Cue List</h2>
+                <CueListEditor cues={cues} setCues={setCues} />
+              </div>
+            )}
+          </main>
 
-            <aside className="sidebar-right">
+          <aside className="sidebar-right">
+            {isPresenting ? (
               <div className="messages-section">
                 <h2>Messages</h2>
                 <div className="message-input-wrapper">
@@ -338,21 +375,93 @@ function App() {
                   </button>
                 </div>
 
+                {messages.length > 0 && (
+                  <div className="prepopulated-messages">
+                    <p className="prepop-label">Quick Messages</p>
+                    <div className="prepop-list">
+                      {messages.map((msg, index) => (
+                        <button
+                          key={index}
+                          onClick={() => usePrePopulatedMessage(msg)}
+                          className="btn-prepop-message"
+                          title={msg}
+                        >
+                          {msg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {currentMessage && (
                   <div className="current-message">
                     <div className="message-box">
                       <p>{currentMessage}</p>
                     </div>
-                    <button onClick={dismissMessage} className="btn-dismiss-message">
-                      Dismiss Message
-                    </button>
+                    <div className="message-actions">
+                      <button onClick={toggleMessageVisibility} className="btn-message-action">
+                        {isMessageVisibleOnTimer ? 'Hide on Timer' : 'Show on Timer'}
+                      </button>
+                      <button onClick={dismissMessage} className="btn-dismiss-message">
+                        Clear
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-            </aside>
-          </div>
+            ) : (
+              <div className="info-section">
+                <h3>Info</h3>
+                <div className="info-item">
+                  <label>Total Cues</label>
+                  <p>{cues.length}</p>
+                </div>
+                <div className="info-item">
+                  <label>Total Duration</label>
+                  <p>
+                    {Math.floor(cues.reduce((sum, c) => sum + c.seconds, 0) / 60)}:
+                    {(cues.reduce((sum, c) => sum + c.seconds, 0) % 60)
+                      .toString()
+                      .padStart(2, '0')}
+                  </p>
+                </div>
+
+                <div className="messages-list-section">
+                  <h4>Prepopulated Messages</h4>
+                  <div className="message-input-add">
+                    <input
+                      type="text"
+                      value={newMessageText}
+                      onChange={(e) => setNewMessageText(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addMessage()}
+                      placeholder="Add message..."
+                      className="message-input-add-field"
+                    />
+                    <button onClick={addMessage} className="btn-add-message">
+                      Add
+                    </button>
+                  </div>
+
+                  <div className="messages-list">
+                    {messages.map((msg, index) => (
+                      <div key={index} className="message-item">
+                        <p>{msg}</p>
+                        <button
+                          onClick={() => deleteMessage(index)}
+                          className="btn-delete-message"
+                          title="Delete"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
-      )}
+      </div>
     </div>
   )
 }
