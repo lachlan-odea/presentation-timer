@@ -12,6 +12,8 @@ function App() {
   const [timerWindow, setTimerWindow] = useState(null)
   const [elapsed, setElapsed] = useState(0)
   const [isRunning, setIsRunning] = useState(true)
+  const [messageText, setMessageText] = useState('')
+  const [currentMessage, setCurrentMessage] = useState('')
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -116,6 +118,29 @@ function App() {
     return '#FF5252'
   }
 
+  const sendMessage = () => {
+    if (messageText.trim() && timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'MESSAGE', text: messageText }, '*')
+      setCurrentMessage(messageText)
+      setMessageText('')
+    }
+  }
+
+  const dismissMessage = () => {
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'CLEAR_MESSAGE' }, '*')
+    }
+    setCurrentMessage('')
+  }
+
+  const toggleTimer = () => {
+    const newState = !isRunning
+    setIsRunning(newState)
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'TOGGLE_TIMER', isRunning: newState }, '*')
+    }
+  }
+
   const exportCues = () => {
     const dataStr = JSON.stringify(cues, null, 2)
     const dataBlob = new Blob([dataStr], { type: 'application/json' })
@@ -216,40 +241,115 @@ function App() {
           </div>
         </div>
       ) : (
-        <div className="presentation-controls">
-          <div className="timer-display-small" style={{ color: getTimeColor() }}>
-            {elapsed >= (cues[currentCueIndex]?.seconds || 0) ? '+' : ''}
-            {formatTime(getDisplayTime())}
-          </div>
-          <div className="controls-header">
-            <h2>Presentation Controls</h2>
-            <p>{currentCueIndex !== null && cues[currentCueIndex]?.title}</p>
-          </div>
-          <div className="controls-buttons">
-            <button onClick={() => setIsRunning(!isRunning)} className="btn-play-pause">
-              {isRunning ? '⏸ Pause' : '▶ Play'}
-            </button>
-            <button onClick={moveToPreviousCue} disabled={currentCueIndex === 0}>
-              ← Previous
-            </button>
-            <button onClick={moveToNextCue} disabled={currentCueIndex === cues.length - 1}>
-              Next →
-            </button>
-            <button onClick={endPresentation} className="btn-end">
+        <div className="dashboard">
+          <div className="dashboard-header">
+            <div className="header-content">
+              <h1>Presentation Dashboard</h1>
+              <div className="header-status">
+                <span className="status-badge">Live</span>
+                <span className="cue-counter">Cue {currentCueIndex !== null ? currentCueIndex + 1 : 0} of {cues.length}</span>
+              </div>
+            </div>
+            <button onClick={endPresentation} className="btn-end-presentation">
               End Presentation
             </button>
           </div>
-          <div className="cue-info-panel">
-            <h3>Cues</h3>
-            {cues.map((cue, index) => (
-              <button
-                key={index}
-                className={`cue-button ${index === currentCueIndex ? 'active' : ''}`}
-                onClick={() => jumpToCue(index)}
-              >
-                {index + 1}. {cue.title} ({Math.floor(cue.seconds / 60)}:{(cue.seconds % 60).toString().padStart(2, '0')})
-              </button>
-            ))}
+
+          <div className="dashboard-container">
+            <aside className="sidebar-left">
+              <div className="timer-section">
+                <div className="timer-display" style={{ color: getTimeColor() }}>
+                  {elapsed >= (cues[currentCueIndex]?.seconds || 0) ? '+' : ''}
+                  {formatTime(getDisplayTime())}
+                </div>
+                <div className="timer-label">
+                  {showTimeRemaining ? 'Remaining' : 'Elapsed'}
+                </div>
+              </div>
+
+              <div className="cue-info-section">
+                <div className="current-cue">
+                  <h3>Now Playing</h3>
+                  <div className="cue-details">
+                    <p className="cue-title">{currentCueIndex !== null && cues[currentCueIndex]?.title}</p>
+                    <p className="cue-speaker">{currentCueIndex !== null && cues[currentCueIndex]?.speaker}</p>
+                  </div>
+                </div>
+
+                {currentCueIndex !== null && currentCueIndex < cues.length - 1 && (
+                  <div className="next-cue">
+                    <h4>Next</h4>
+                    <p className="next-cue-title">{cues[currentCueIndex + 1]?.title}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="controls-section">
+                <button onClick={toggleTimer} className="btn-control btn-play-pause">
+                  {isRunning ? '⏸ Pause' : '▶ Play'}
+                </button>
+                <button onClick={moveToPreviousCue} disabled={currentCueIndex === 0} className="btn-control">
+                  ← Previous
+                </button>
+                <button onClick={moveToNextCue} disabled={currentCueIndex === cues.length - 1} className="btn-control">
+                  Next →
+                </button>
+              </div>
+            </aside>
+
+            <main className="dashboard-center">
+              <div className="agenda-section">
+                <h2>Agenda</h2>
+                <div className="agenda-list">
+                  {cues.map((cue, index) => (
+                    <button
+                      key={index}
+                      className={`agenda-item ${index === currentCueIndex ? 'active' : ''}`}
+                      onClick={() => jumpToCue(index)}
+                    >
+                      <span className="item-number">{index + 1}</span>
+                      <div className="item-content">
+                        <p className="item-title">{cue.title}</p>
+                        <p className="item-speaker">{cue.speaker}</p>
+                      </div>
+                      <span className="item-time">
+                        {Math.floor(cue.seconds / 60)}:{(cue.seconds % 60).toString().padStart(2, '0')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </main>
+
+            <aside className="sidebar-right">
+              <div className="messages-section">
+                <h2>Messages</h2>
+                <div className="message-input-wrapper">
+                  <input
+                    type="text"
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    placeholder="Type message..."
+                    className="message-input"
+                  />
+                  <button onClick={sendMessage} className="btn-send-message" disabled={!messageText.trim()}>
+                    Send
+                  </button>
+                </div>
+
+                {currentMessage && (
+                  <div className="current-message">
+                    <div className="message-box">
+                      <p>{currentMessage}</p>
+                    </div>
+                    <button onClick={dismissMessage} className="btn-dismiss-message">
+                      Dismiss Message
+                    </button>
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
         </div>
       )}

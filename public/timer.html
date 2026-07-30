@@ -93,6 +93,31 @@
       font-style: italic;
       color: #B0B0B0;
     }
+
+    .message-display {
+      background: rgba(90, 90, 90, 0.6);
+      border: 2px solid #5A5A5A;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 600px;
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .message-text {
+      font-size: 28px;
+      font-weight: 600;
+      color: #E5E5E5;
+      text-align: center;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .message-display.hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -106,6 +131,9 @@
     <div class="cue-info">
       <div class="cue-position" id="cuePosition">Cue 1 of 1</div>
       <div class="next-cue" id="nextCue"></div>
+    </div>
+    <div class="message-display hidden" id="messageDisplay">
+      <div class="message-text" id="messageText"></div>
     </div>
   </div>
 
@@ -185,6 +213,13 @@
         currentCueIndex = event.data.index
         elapsed = 0
         updateDisplay()
+      } else if (event.data.type === 'MESSAGE') {
+        document.getElementById('messageText').textContent = event.data.text
+        document.getElementById('messageDisplay').classList.remove('hidden')
+      } else if (event.data.type === 'CLEAR_MESSAGE') {
+        document.getElementById('messageDisplay').classList.add('hidden')
+      } else if (event.data.type === 'TOGGLE_TIMER') {
+        isRunning = event.data.isRunning
       }
     })
 
