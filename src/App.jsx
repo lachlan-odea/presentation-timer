@@ -17,6 +17,11 @@ function App() {
   const [isMessageVisibleOnTimer, setIsMessageVisibleOnTimer] = useState(true)
   const [messages, setMessages] = useState([])
   const [newMessageText, setNewMessageText] = useState('')
+  const [timeAdjustment, setTimeAdjustment] = useState(0)
+  const [isAddingLiveCue, setIsAddingLiveCue] = useState(false)
+  const [liveCueTitle, setLiveCueTitle] = useState('')
+  const [liveCueSpeaker, setLiveCueSpeaker] = useState('')
+  const [liveCueTime, setLiveCueTime] = useState('05:00')
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -31,6 +36,7 @@ function App() {
 
   useEffect(() => {
     setElapsed(0)
+    setTimeAdjustment(0)
   }, [currentCueIndex])
 
   useEffect(() => {
@@ -99,26 +105,76 @@ function App() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const getCueDuration = () => {
+    if (currentCueIndex === null || !cues[currentCueIndex]) return 0
+    return Math.max(0, cues[currentCueIndex].seconds + timeAdjustment)
+  }
+
   const getDisplayTime = () => {
     if (currentCueIndex === null || !cues[currentCueIndex]) return 0
-    const currentCue = cues[currentCueIndex]
-    const isOvertime = elapsed >= currentCue.seconds
+    const duration = getCueDuration()
+    const isOvertime = elapsed >= duration
     if (isOvertime) {
-      return elapsed - currentCue.seconds
+      return elapsed - duration
     }
-    return showTimeRemaining ? currentCue.seconds - elapsed : elapsed
+    return showTimeRemaining ? duration - elapsed : elapsed
   }
 
   const getTimeColor = () => {
     if (currentCueIndex === null || !cues[currentCueIndex]) return '#FFFFFF'
-    const currentCue = cues[currentCueIndex]
-    const isOvertime = elapsed >= currentCue.seconds
-    if (isOvertime) return '#FF5252'
-    const displayTime = getDisplayTime()
-    const remainingPercent = (displayTime / currentCue.seconds) * 100
+    const duration = getCueDuration()
+    if (elapsed >= duration) return '#FF5252'
+    const remainingPercent = (getDisplayTime() / duration) * 100
     if (remainingPercent > 50) return '#FFFFFF'
     if (remainingPercent > 25) return '#FFB74D'
     return '#FF5252'
+  }
+
+  const parseTimeInput = (input) => {
+    const parts = (input || '').trim().split(':')
+    if (parts.length !== 2) return null
+    const mins = parseInt(parts[0], 10)
+    const secs = parseInt(parts[1], 10)
+    if (isNaN(mins) || isNaN(secs) || mins < 0 || secs < 0 || secs >= 60) return null
+    return Math.max(1, mins * 60 + secs)
+  }
+
+  const addLiveCue = (position) => {
+    const seconds = parseTimeInput(liveCueTime)
+    if (!liveCueTitle.trim() || seconds === null) return
+
+    const newCue = {
+      id: Date.now(),
+      title: liveCueTitle.trim(),
+      speaker: liveCueSpeaker.trim(),
+      seconds,
+    }
+    // Only ever inserted after the live cue, so currentCueIndex never shifts.
+    const insertIndex = position === 'next' ? currentCueIndex + 1 : cues.length
+    const updated = [...cues]
+    updated.splice(insertIndex, 0, newCue)
+    setCues(updated)
+    // Keep the popup's own copy current in case it is reloaded.
+    sessionStorage.setItem('presentationCues', JSON.stringify(updated))
+
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'CUES_UPDATED', cues: updated, index: currentCueIndex }, '*')
+    }
+
+    setLiveCueTitle('')
+    setLiveCueSpeaker('')
+    setLiveCueTime('05:00')
+    setIsAddingLiveCue(false)
+  }
+
+  const adjustTime = (deltaSeconds) => {
+    if (currentCueIndex === null || !cues[currentCueIndex]) return
+    const baseSeconds = cues[currentCueIndex].seconds
+    const newAdjustment = Math.max(-baseSeconds, timeAdjustment + deltaSeconds)
+    setTimeAdjustment(newAdjustment)
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'ADJUST_TIME', adjustment: newAdjustment }, '*')
+    }
   }
 
   const sendMessage = () => {
@@ -282,10 +338,15 @@ function App() {
             <div className="timer-preview-section">
               <div className="preview-timer" style={{ color: isPresenting ? getTimeColor() : '#FFFFFF' }}>
                 {isPresenting
-                  ? (elapsed >= (cues[currentCueIndex]?.seconds || 0) ? '+' : '') + formatTime(getDisplayTime())
+                  ? (elapsed >= getCueDuration() ? '+' : '') + formatTime(getDisplayTime())
                   : (cues.length > 0 ? formatTime(cues[0]?.seconds || 0) : '0:00')
                 }
               </div>
+              {isPresenting && timeAdjustment !== 0 && (
+                <p className="preview-adjustment">
+                  {timeAdjustment > 0 ? '+' : '−'}{formatTime(Math.abs(timeAdjustment))} adjusted
+                </p>
+              )}
               {cues.length > 0 && (
                 <>
                   <p className="preview-title">
@@ -324,12 +385,100 @@ function App() {
                 →
               </button>
             </div>
+
+            <div className="time-adjust-section">
+              <p className="time-adjust-label">Adjust Time</p>
+              <div className="time-adjust-grid">
+                {[1, 5, 10].map((mins) => (
+                  <button
+                    key={`add-${mins}`}
+                    onClick={() => adjustTime(mins * 60)}
+                    className="btn-time-adjust btn-time-add"
+                    disabled={!isPresenting}
+                    title={`Add ${mins} minute${mins > 1 ? 's' : ''}`}
+                  >
+                    +{mins}m
+                  </button>
+                ))}
+                {[1, 5, 10].map((mins) => (
+                  <button
+                    key={`sub-${mins}`}
+                    onClick={() => adjustTime(-mins * 60)}
+                    className="btn-time-adjust btn-time-subtract"
+                    disabled={!isPresenting || getCueDuration() === 0}
+                    title={`Subtract ${mins} minute${mins > 1 ? 's' : ''}`}
+                  >
+                    −{mins}m
+                  </button>
+                ))}
+              </div>
+            </div>
           </aside>
 
           <main className="dashboard-center">
             {isPresenting ? (
               <div className="agenda-section">
-                <h2>Agenda</h2>
+                <div className="agenda-header">
+                  <h2>Agenda</h2>
+                  <button
+                    onClick={() => setIsAddingLiveCue(!isAddingLiveCue)}
+                    className="btn-add-live-cue"
+                  >
+                    {isAddingLiveCue ? 'Cancel' : '+ Add Cue'}
+                  </button>
+                </div>
+
+                {isAddingLiveCue && (
+                  <div className="add-live-cue">
+                    <div className="add-live-cue-fields">
+                      <input
+                        type="text"
+                        value={liveCueTitle}
+                        onChange={(e) => setLiveCueTitle(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addLiveCue('end')}
+                        placeholder="Cue title"
+                        className="live-cue-input"
+                        autoFocus
+                      />
+                      <input
+                        type="text"
+                        value={liveCueSpeaker}
+                        onChange={(e) => setLiveCueSpeaker(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addLiveCue('end')}
+                        placeholder="Speaker"
+                        className="live-cue-input"
+                      />
+                      <input
+                        type="text"
+                        value={liveCueTime}
+                        onChange={(e) => setLiveCueTime(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addLiveCue('end')}
+                        placeholder="MM:SS"
+                        className="live-cue-input live-cue-time"
+                        maxLength="5"
+                      />
+                    </div>
+                    <div className="add-live-cue-actions">
+                      <button
+                        onClick={() => addLiveCue('next')}
+                        className="btn-live-cue-action"
+                        disabled={!liveCueTitle.trim() || parseTimeInput(liveCueTime) === null}
+                        title="Insert directly after the cue running now"
+                      >
+                        Insert Next
+                      </button>
+                      <button
+                        onClick={() => addLiveCue('end')}
+                        className="btn-live-cue-action"
+                        disabled={!liveCueTitle.trim() || parseTimeInput(liveCueTime) === null}
+                        title="Append to the end of the agenda"
+                      >
+                        Add to End
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="agenda-list">
                   {cues.map((cue, index) => (
                     <button

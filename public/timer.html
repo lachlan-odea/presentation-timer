@@ -152,12 +152,18 @@
   </div>
 
   <script>
-    const cues = JSON.parse(sessionStorage.getItem('presentationCues') || '[]')
+    let cues = JSON.parse(sessionStorage.getItem('presentationCues') || '[]')
     const showTimeRemaining = JSON.parse(sessionStorage.getItem('showTimeRemaining') || 'true')
     let currentCueIndex = 0
     let elapsed = 0
     let isRunning = true
     let timerInterval = null
+    let timeAdjustment = 0
+
+    function cueDuration() {
+      if (!cues.length) return 0
+      return Math.max(0, cues[currentCueIndex].seconds + timeAdjustment)
+    }
 
     function formatTime(seconds) {
       const mins = Math.floor(seconds / 60)
@@ -169,21 +175,22 @@
       if (!cues.length) return
 
       const currentCue = cues[currentCueIndex]
-      const isOvertime = elapsed >= currentCue.seconds
+      const duration = cueDuration()
+      const isOvertime = elapsed >= duration
 
       document.getElementById('cueTitle').textContent = currentCue.title
       document.getElementById('cueSpeaker').textContent = currentCue.speaker || ''
 
       let displayTime
       if (isOvertime) {
-        displayTime = elapsed - currentCue.seconds
+        displayTime = elapsed - duration
       } else {
-        displayTime = showTimeRemaining ? currentCue.seconds - elapsed : elapsed
+        displayTime = showTimeRemaining ? duration - elapsed : elapsed
       }
 
       document.getElementById('timerDisplay').textContent = `${isOvertime ? '+' : ''}${formatTime(displayTime)}`
 
-      const progress = isOvertime ? 100 : (elapsed / currentCue.seconds) * 100
+      const progress = isOvertime ? 100 : (elapsed / duration) * 100
       document.getElementById('progressFill').style.width = `${progress}%`
 
       document.getElementById('cuePosition').textContent = `Cue ${currentCueIndex + 1} of ${cues.length}`
@@ -200,7 +207,7 @@
       if (isOvertime) {
         displayElement.style.color = '#FF5252'
       } else {
-        const remainingPercent = (displayTime / currentCue.seconds) * 100
+        const remainingPercent = (displayTime / duration) * 100
         if (remainingPercent > 50) {
           displayElement.style.color = '#FFFFFF'
         } else if (remainingPercent > 25) {
@@ -226,6 +233,15 @@
       if (event.data.type === 'CUE_CHANGED') {
         currentCueIndex = event.data.index
         elapsed = 0
+        timeAdjustment = 0
+        updateDisplay()
+      } else if (event.data.type === 'CUES_UPDATED') {
+        // Cues added mid-presentation: keep the running cue, refresh the list around it.
+        cues = event.data.cues
+        currentCueIndex = event.data.index
+        updateDisplay()
+      } else if (event.data.type === 'ADJUST_TIME') {
+        timeAdjustment = event.data.adjustment
         updateDisplay()
       } else if (event.data.type === 'MESSAGE') {
         document.getElementById('messageText').textContent = event.data.text
