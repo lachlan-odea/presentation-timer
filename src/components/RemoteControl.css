@@ -514,3 +514,10 @@
   font-size: 12px;
   opacity: 0.9;
 }
+
+.remote-paths {
+  margin: 0;
+  font-size: 11px;
+  color: #6A6A6A;
+  text-align: center;
+}

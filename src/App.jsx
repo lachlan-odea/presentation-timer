@@ -775,8 +775,11 @@ function App() {
 
       {isRemotePanelOpen && (
         <RemotePanel
-          peerId={remote.peerId}
+          sessionId={remote.sessionId}
+          keyText={remote.keyText}
           status={remote.status}
+          directStatus={remote.directStatus}
+          relayStatus={remote.relayStatus}
           error={remote.error}
           remoteCount={remote.remoteCount}
           onClose={() => setIsRemotePanelOpen(false)}

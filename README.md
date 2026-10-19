@@ -103,47 +103,56 @@ remote with two tabs:
 - **Cues**: the full cue list — tap a cue to jump to it, edit its title, speaker and time,
   reorder, delete, or add new cues. The cue running right now cannot be deleted.
 
+#### How the phone reaches the computer
+
+There are two paths, and the phone opens both and uses whichever works:
+
+- **Direct link** — a WebRTC data channel, set up through the free public PeerJS server.
+  Fastest, and nothing passes through a third party. Android phones usually connect this way.
+- **Encrypted relay** — both devices dial out to a public MQTT broker over a WebSocket on
+  port 443, so there is no NAT to cross: if the phone can load a web page, it can use the
+  relay. iPhones usually connect this way, because Safari often can't open the direct link.
+
+Relay traffic is end-to-end encrypted (AES-GCM) with a key generated for each session. The key
+travels only in the QR code's URL fragment (`#k=…`), which browsers never send to a server, so
+the broker and anyone else on it see only ciphertext — and can't send commands, because
+anything not sealed with the key is dropped. A link shared without its fragment can't use the
+relay.
+
+The panel shows the state of both paths, and the bottom of the phone remote shows which one it
+is using.
+
 Notes:
 
-- Both devices on the same Wi-Fi is the most reliable setup. A phone on mobile data with the
-  computer on office Wi-Fi has to be relayed through a TURN server, and the default is a free
-  public one — best effort, and the panel says whether it is actually reachable.
-- The phone talks directly to the dashboard browser over WebRTC, brokered by the free public
-  PeerJS signalling server. Nothing is stored on a server, but the broker has to be reachable:
-  some corporate and venue networks block it, in which case the panel reports a failed
-  connection and a phone hotspot is the quickest fallback.
 - Keep the dashboard tab open — it holds the show state and the phone is only a remote.
-- Anyone with the link can control the show. Use **Stop Remote** in the panel to end the
-  session; the next session issues a new QR code.
-- If the phone sleeps or changes network, it reconnects on its own, backing off between
-  attempts. While it is offline the screen dims and a banner appears so stale readings are
-  obvious, and the reason for the failure is shown on the phone.
+- Anyone with the full link can control the show. Use **Stop Remote** in the panel to end the
+  session; the next session issues a new QR code and key.
+- If the phone sleeps or changes network, it reconnects on its own. If no update arrives from
+  the dashboard for twelve seconds, the screen dims and a banner appears so stale readings are
+  obvious, along with the reason for any failure.
 - Starting and ending the presentation stays on the computer, since opening the timer window
   needs a click there.
+- To check a specific path, add `&via=direct` or `&via=relay` to the remote link (before the
+  `#`).
 
 #### If a phone won't connect
 
-The Phone Remote panel reports what it can reach, and the phone shows why each attempt failed.
-Match the message:
-
 | What you see | What it means |
 | --- | --- |
-| Panel: *Direct connections only* | No TURN relay is reachable. Put the phone on the same Wi-Fi as the computer, or configure your own relay (below). |
-| Phone: *Reached the pairing server but couldn't open a link* | Signalling worked and the host was found, but no network path exists between the two devices — the same relay problem. |
+| Panel: *Encrypted relay: unreachable* | This computer's network blocks both relay brokers. iPhones will then struggle; try a phone hotspot. |
+| Phone: *This link is missing its key* | The address was shared without the `#k=…` part. Scan the QR code. |
 | Phone: *That session isn't open any more* | The dashboard reloaded or the remote was stopped. Reopen Phone Remote and scan the new code. |
-| Phone: *Can't reach the pairing server* | The network blocks the PeerJS broker. Try another network or a hotspot. |
+| Phone: *Reached the pairing server but couldn't open a link* | The direct link failed. Normally the relay takes over; if it doesn't, the relay is blocked too. |
+| Phone: *Can't reach the pairing server* | The network blocks the PeerJS broker. The relay may still work. |
 
-The most reliable fix for a phone on mobile data is your own TURN relay. Metered, ExpressTURN
-and Cloudflare all have free tiers; set the credentials at build time and rebuild:
+The direct link can also be helped across networks by a TURN relay of your own — Metered,
+ExpressTURN and Cloudflare all have free tiers. Set the credentials at build time:
 
 ```bash
 VITE_TURN_URLS="turn:your.host:3478,turns:your.host:5349"
 VITE_TURN_USERNAME="username"
 VITE_TURN_CREDENTIAL="credential"
 ```
-
-Failing that, having the computer join the phone's hotspot puts both devices on one network,
-where no relay is needed at all.
 
 ### Overtime Tracking
 
@@ -163,7 +172,7 @@ where no relay is needed at all.
 ## Architecture
 
 - **Framework**: React 19 with Vite
-- **Phone remote**: PeerJS (WebRTC data channel) + qrcode, both loaded on demand
+- **Phone remote**: PeerJS (WebRTC data channel) and mqtt.js (encrypted relay), plus qrcode — all loaded on demand
 - **Styling**: CSS3 with responsive design
 - **State Management**: React hooks (useState, useEffect)
 - **Build Tool**: Vite for fast development and optimized production builds
@@ -192,8 +201,12 @@ presentation-timer/
 │   │   ├── Timer.jsx            # Presentation timer view
 │   │   └── Timer.css
 │   ├── hooks/
-│   │   └── useRemoteHost.js     # WebRTC session the phone remotes connect to
+│   │   ├── useRemoteHost.js     # Dashboard side of a phone remote session
+│   │   └── useRemoteClient.js   # Phone side: direct link + relay, whichever works
 │   ├── utils/
+│   │   ├── peerConfig.js        # WebRTC/ICE settings and error messages
+│   │   ├── relay.js             # MQTT relay transport
+│   │   ├── secureChannel.js     # AES-GCM encryption for relay traffic
 │   │   ├── runsheetParser.js    # .docx runsheet import
 │   │   └── timerDisplay.js      # Shared clock formatting and colour rules
 │   ├── App.jsx                  # Main app component

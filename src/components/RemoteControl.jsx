@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import './RemoteControl.css'
 import {
   formatTime,
@@ -8,113 +8,32 @@ import {
   getTimeColor,
   parseTimeInput,
 } from '../utils/timerDisplay'
-import { PEER_OPTIONS, describePeerError, supportsWebRTC } from '../utils/peerConfig'
+import { useRemoteClient } from '../hooks/useRemoteClient'
 
-// Backs off so a phone that can't reach the host doesn't hammer the broker,
-// which would get it rate-limited and make the failure permanent.
-const RETRY_DELAYS = [2000, 4000, 8000, 15000]
+const PATH_LABELS = {
+  off: 'off',
+  connecting: 'trying…',
+  open: 'connected',
+  connected: 'connected',
+  failed: 'unavailable',
+  unreachable: 'unreachable',
+}
 
-function RemoteControl({ hostId }) {
-  const [status, setStatus] = useState('connecting')
-  const [failure, setFailure] = useState('')
-  const [attempts, setAttempts] = useState(0)
-  const [show, setShow] = useState(null)
+function RemoteControl({ hostId, keyText, via }) {
+  const { show, status, failure, attempts, paths, send } = useRemoteClient({ hostId, keyText, via })
   const [tab, setTab] = useState('control')
   const [messageDraft, setMessageDraft] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [draft, setDraft] = useState({ title: '', speaker: '', time: '' })
   const [isAdding, setIsAdding] = useState(false)
 
-  const connRef = useRef(null)
-
-  useEffect(() => {
-    if (!supportsWebRTC) {
-      setStatus('unsupported')
-      setFailure('This browser can’t do WebRTC, which the remote needs. Try Safari or Chrome.')
-      return
-    }
-
-    let cancelled = false
-    let peer = null
-    let retryTimer = null
-    let attempt = 0
-
-    const connect = async () => {
-      const { default: Peer } = await import('peerjs')
-      if (cancelled) return
-
-      attempt += 1
-      setAttempts(attempt)
-      setStatus((prev) => (prev === 'connected' ? prev : 'connecting'))
-
-      // Held locally as well as in `peer`, so a callback that fires after this
-      // attempt has been replaced can tell that it is stale and bow out.
-      const instance = new Peer(PEER_OPTIONS)
-      peer = instance
-
-      const isStale = () => cancelled || peer !== instance
-
-      instance.on('open', () => {
-        if (isStale()) return
-        const conn = instance.connect(hostId, { reliable: true })
-        connRef.current = conn
-
-        conn.on('open', () => {
-          if (isStale()) return
-          attempt = 0
-          setFailure('')
-          setStatus('connected')
-        })
-        conn.on('data', (message) => {
-          if (!isStale() && message?.type === 'STATE') setShow(message.state)
-        })
-        conn.on('close', () => !isStale() && retry())
-        conn.on('error', (err) => !isStale() && retry(err))
-      })
-
-      instance.on('error', (err) => !isStale() && retry(err))
-      instance.on('disconnected', () => !isStale() && retry())
-    }
-
-    // The phone drops the connection whenever it sleeps or changes network, so
-    // the remote keeps dialling the host back until the tab is closed, saying
-    // why each attempt failed rather than spinning silently.
-    const retry = (err) => {
-      if (cancelled || retryTimer) return
-      if (err) setFailure(describePeerError(err.type, err.message))
-      setStatus('reconnecting')
-      connRef.current = null
-      peer?.destroy()
-      peer = null
-      const delay = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)]
-      retryTimer = setTimeout(() => {
-        retryTimer = null
-        connect()
-      }, delay)
-    }
-
-    const onVisible = () => {
-      if (document.visibilityState === 'visible' && !connRef.current?.open) retry()
-    }
-
-    connect()
-    document.addEventListener('visibilitychange', onVisible)
-
-    return () => {
-      cancelled = true
-      clearTimeout(retryTimer)
-      document.removeEventListener('visibilitychange', onVisible)
-      connRef.current = null
-      peer?.destroy()
-    }
-  }, [hostId])
-
-  const send = (command) => {
-    const conn = connRef.current
-    if (conn?.open) conn.send(command)
-  }
-
   const sendCues = (cues) => send({ type: 'SET_CUES', cues })
+
+  const pathSummary = (
+    <p className="remote-paths">
+      Direct: {PATH_LABELS[paths.direct]} · Relay: {PATH_LABELS[paths.relay]}
+    </p>
+  )
 
   if (!show) {
     return (
@@ -124,9 +43,9 @@ function RemoteControl({ hostId }) {
           <p>
             {status === 'unsupported'
               ? 'Remote unavailable'
-              : status === 'connecting'
-                ? 'Connecting to the dashboard…'
-                : `Still trying… (attempt ${attempts})`}
+              : attempts > 1
+                ? `Still trying… (attempt ${attempts})`
+                : 'Connecting to the dashboard…'}
           </p>
 
           {failure ? (
@@ -142,6 +61,7 @@ function RemoteControl({ hostId }) {
               <button onClick={() => window.location.reload()} className="btn-remote-primary">
                 Try again
               </button>
+              {pathSummary}
               <p className="remote-waiting-hint">
                 Session <code>{hostId}</code>
               </p>
@@ -417,6 +337,7 @@ function RemoteControl({ hostId }) {
               </p>
             </div>
           )}
+          {pathSummary}
         </main>
       ) : (
         <main className="remote-body">

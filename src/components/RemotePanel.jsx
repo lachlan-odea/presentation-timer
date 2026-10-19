@@ -1,22 +1,39 @@
 import { useEffect, useState } from 'react'
 import './RemotePanel.css'
-import { probeRelay } from '../utils/peerConfig'
 
-function RemotePanel({ peerId, status, error, remoteCount, onClose, onStop }) {
+const DIRECT_LABELS = {
+  idle: 'off',
+  connecting: 'starting…',
+  ready: 'ready',
+  error: 'unavailable',
+  unsupported: 'not supported in this browser',
+}
+
+const RELAY_LABELS = {
+  idle: 'off',
+  connecting: 'connecting…',
+  connected: 'ready',
+  unreachable: 'unreachable from this network',
+  unsupported: 'needs a secure (https) page',
+}
+
+function RemotePanel({
+  sessionId,
+  keyText,
+  status,
+  directStatus,
+  relayStatus,
+  error,
+  remoteCount,
+  onClose,
+  onStop,
+}) {
   const [qr, setQr] = useState('')
   const [copied, setCopied] = useState(false)
-  const [relay, setRelay] = useState('checking')
 
-  useEffect(() => {
-    let cancelled = false
-    probeRelay().then((result) => !cancelled && setRelay(result))
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const remoteUrl = peerId
-    ? `${window.location.origin}${import.meta.env.BASE_URL}?remote=${peerId}`
+  // The key rides in the fragment, which browsers never send to a server.
+  const remoteUrl = sessionId
+    ? `${window.location.origin}${import.meta.env.BASE_URL}?remote=${sessionId}${keyText ? `#k=${keyText}` : ''}`
     : ''
 
   // A QR pointing at localhost resolves to the phone itself, so the page never
@@ -109,29 +126,30 @@ function RemotePanel({ peerId, status, error, remoteCount, onClose, onStop }) {
 
         {status === 'error' && (
           <p className="remote-hint">
-            The remote needs the public PeerJS broker, which some corporate and venue networks
-            block. Try a different network or a phone hotspot.
+            Neither path is available from this network. Try a different network or a phone
+            hotspot.
           </p>
         )}
 
         <div className="remote-reach">
-          {relay === 'checking' && <span className="remote-reach-line">Checking reach…</span>}
-          {relay === 'relay' && (
-            <span className="remote-reach-line reach-ok">
-              Relay available — a phone on mobile data can connect.
-            </span>
-          )}
-          {relay === 'none' && (
-            <span className="remote-reach-line reach-limited">
-              Direct connections only — no relay is reachable from this network, so the phone
-              must be on the same Wi-Fi as this computer.
-            </span>
-          )}
-          {relay === 'unsupported' && (
-            <span className="remote-reach-line reach-limited">
-              This browser has no WebRTC, so the remote cannot run here.
-            </span>
-          )}
+          <span className={`remote-reach-line ${directStatus === 'ready' ? 'reach-ok' : ''}`}>
+            Direct link: {DIRECT_LABELS[directStatus]}
+          </span>
+          <span
+            className={`remote-reach-line ${
+              relayStatus === 'connected'
+                ? 'reach-ok'
+                : relayStatus === 'unreachable'
+                  ? 'reach-limited'
+                  : ''
+            }`}
+          >
+            Encrypted relay: {RELAY_LABELS[relayStatus]}
+          </span>
+          <span className="remote-reach-line">
+            Phones use the direct link when they can and the relay otherwise — iPhones usually
+            need the relay.
+          </span>
         </div>
 
         <div className="remote-panel-footer">
@@ -139,7 +157,7 @@ function RemotePanel({ peerId, status, error, remoteCount, onClose, onStop }) {
             Stop Remote
           </button>
           <p className="remote-hint">
-            Anyone with this link can control the show until you stop the session or close the tab.
+            Anyone with this link can control the show until you stop the session or close the tab. Relay traffic is end-to-end encrypted with a key that only exists in the QR code.
           </p>
         </div>
       </div>

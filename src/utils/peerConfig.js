@@ -38,51 +38,6 @@ export const PEER_OPTIONS = {
   config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 4 },
 }
 
-/**
- * Asks the browser to gather relay-only candidates, which answers the question
- * that matters before a show: can a phone that isn't on this network connect at
- * all, or only one sharing the Wi-Fi? Resolves 'relay', 'none' or 'unsupported'.
- */
-export function probeRelay(timeout = 7000) {
-  return new Promise((resolve) => {
-    if (!supportsWebRTC) return resolve('unsupported')
-
-    let pc
-    try {
-      pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay' })
-    } catch {
-      return resolve('none')
-    }
-
-    const finish = (result) => {
-      clearTimeout(timer)
-      try {
-        pc.close()
-      } catch {
-        // already closed
-      }
-      resolve(result)
-    }
-
-    const timer = setTimeout(() => finish('none'), timeout)
-
-    pc.onicecandidate = (event) => {
-      const candidate = event.candidate
-      if (!candidate) return
-      if (candidate.type === 'relay' || / typ relay /.test(candidate.candidate)) finish('relay')
-    }
-
-    try {
-      pc.createDataChannel('probe')
-      pc.createOffer()
-        .then((offer) => pc.setLocalDescription(offer))
-        .catch(() => finish('none'))
-    } catch {
-      finish('none')
-    }
-  })
-}
-
 export const supportsWebRTC =
   typeof window !== 'undefined' && typeof window.RTCPeerConnection !== 'undefined'
 
