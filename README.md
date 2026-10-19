@@ -10,6 +10,7 @@ A modern, real-time presentation timer for managing cues and speaker times durin
 - **Overtime Alerts**: Automatically tracks and displays when speakers go over their allocated time
 - **Time Display Modes**: Toggle between remaining time and elapsed time
 - **Cue Navigation**: Jump between cues, move forward/backward, pause/resume
+- **Float Over Slides**: Always-on-top mini timer that sits over PowerPoint presenter view
 - **Import/Export**: Save and load cue lists as JSON for reuse
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
@@ -72,6 +73,24 @@ The repository includes GitHub Actions workflow for automatic deployment.
    - **Previous/Next**: Navigate between cues
    - **Mini Cue List**: Click any cue to jump to it
    - **End**: Exit presentation mode
+
+### Floating Over PowerPoint Presenter View
+
+Click **Float Over Slides** during a presentation to pop the timer into a small always-on-top
+window that stays above every other application, so the speaker can read their notes in
+PowerPoint presenter view and watch the clock at the same time.
+
+The floating window shows the current cue, the clock, the progress bar, the next cue, and any
+message sent from the dashboard. Hovering it reveals pause and previous/next controls. Drag it
+anywhere over presenter view and resize it — the text scales with the window.
+
+Notes:
+
+- Requires Chrome or Edge 116+ (it uses the Document Picture-in-Picture API). The button is
+  disabled in browsers without it.
+- Run PowerPoint presenter view on a normal (non-exclusive-fullscreen) window so the floating
+  timer can sit above it. Presenter view on the laptop screen with the slideshow on the second
+  display works as expected.
 
 ### Overtime Tracking
 

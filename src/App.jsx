@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import './App.css'
 import CueListEditor from './components/CueListEditor'
 import Timer from './components/Timer'
+import FloatingTimer from './components/FloatingTimer'
 import { parseRunsheet } from './utils/runsheetParser'
+
+// Document Picture-in-Picture gives us an OS-level always-on-top window, which is
+// the only way a web page can sit over PowerPoint's presenter view.
+const supportsFloatingTimer = typeof window !== 'undefined' && 'documentPictureInPicture' in window
 
 function App() {
   const [cues, setCues] = useState([])
@@ -22,6 +28,7 @@ function App() {
   const [liveCueTitle, setLiveCueTitle] = useState('')
   const [liveCueSpeaker, setLiveCueSpeaker] = useState('')
   const [liveCueTime, setLiveCueTime] = useState('05:00')
+  const [floatWindow, setFloatWindow] = useState(null)
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -67,9 +74,54 @@ function App() {
     if (timerWindow && !timerWindow.closed) {
       timerWindow.close()
     }
+    if (floatWindow) {
+      floatWindow.close()
+      setFloatWindow(null)
+    }
     setIsPresenting(false)
     setCurrentCueIndex(null)
     setTimerWindow(null)
+  }
+
+  const openFloatingTimer = async () => {
+    if (!supportsFloatingTimer) return
+
+    const pip = await window.documentPictureInPicture.requestWindow({
+      width: 420,
+      height: 300,
+    })
+
+    // The PiP window starts with an empty document, so the app's styles have to
+    // be copied across before anything is rendered into it.
+    for (const sheet of document.styleSheets) {
+      try {
+        const css = [...sheet.cssRules].map((rule) => rule.cssText).join('')
+        const style = document.createElement('style')
+        style.textContent = css
+        pip.document.head.appendChild(style)
+      } catch {
+        // Cross-origin sheet: link it instead of inlining it.
+        if (sheet.href) {
+          const link = document.createElement('link')
+          link.rel = 'stylesheet'
+          link.href = sheet.href
+          pip.document.head.appendChild(link)
+        }
+      }
+    }
+
+    pip.document.title = 'Timer'
+    pip.document.body.classList.add('pip-body')
+    pip.addEventListener('pagehide', () => setFloatWindow(null))
+
+    setFloatWindow(pip)
+  }
+
+  const closeFloatingTimer = () => {
+    if (floatWindow) {
+      floatWindow.close()
+      setFloatWindow(null)
+    }
   }
 
   const moveToNextCue = () => {
@@ -295,9 +347,23 @@ function App() {
           </div>
           <div className="header-actions">
             {isPresenting ? (
-              <button onClick={endPresentation} className="btn-end-presentation">
-                End Presentation
-              </button>
+              <>
+                <button
+                  onClick={floatWindow ? closeFloatingTimer : openFloatingTimer}
+                  className="btn-header-action"
+                  disabled={!supportsFloatingTimer}
+                  title={
+                    supportsFloatingTimer
+                      ? 'Open a small always-on-top timer that floats over PowerPoint presenter view'
+                      : 'Needs Chrome or Edge 116+'
+                  }
+                >
+                  {floatWindow ? 'Close Float' : 'Float Over Slides'}
+                </button>
+                <button onClick={endPresentation} className="btn-end-presentation">
+                  End Presentation
+                </button>
+              </>
             ) : (
               <>
                 <button onClick={exportCues} disabled={cues.length === 0} className="btn-header-action">
@@ -611,6 +677,26 @@ function App() {
           </aside>
         </div>
       </div>
+
+      {floatWindow &&
+        createPortal(
+          <FloatingTimer
+            title={cues[currentCueIndex]?.title || ''}
+            speaker={cues[currentCueIndex]?.speaker || ''}
+            time={(elapsed >= getCueDuration() ? '+' : '') + formatTime(getDisplayTime())}
+            color={getTimeColor()}
+            progress={getCueDuration() > 0 ? Math.min(100, (elapsed / getCueDuration()) * 100) : 100}
+            nextCue={cues[currentCueIndex + 1]?.title || ''}
+            message={isMessageVisibleOnTimer ? currentMessage : ''}
+            isRunning={isRunning}
+            canGoPrevious={currentCueIndex > 0}
+            canGoNext={currentCueIndex < cues.length - 1}
+            onToggleTimer={toggleTimer}
+            onPreviousCue={moveToPreviousCue}
+            onNextCue={moveToNextCue}
+          />,
+          floatWindow.document.body
+        )}
     </div>
   )
 }
