@@ -1,10 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import './App.css'
 import CueListEditor from './components/CueListEditor'
 import Timer from './components/Timer'
 import FloatingTimer from './components/FloatingTimer'
+import RemotePanel from './components/RemotePanel'
+import { useRemoteHost } from './hooks/useRemoteHost'
 import { parseRunsheet } from './utils/runsheetParser'
+import {
+  formatTime,
+  getCueDuration as cueDuration,
+  getDisplayTime as displayTime,
+  getProgress,
+  getTimeColor as timeColor,
+  parseTimeInput,
+} from './utils/timerDisplay'
 
 // Document Picture-in-Picture gives us an OS-level always-on-top window, which is
 // the only way a web page can sit over PowerPoint's presenter view.
@@ -29,6 +39,18 @@ function App() {
   const [liveCueSpeaker, setLiveCueSpeaker] = useState('')
   const [liveCueTime, setLiveCueTime] = useState('05:00')
   const [floatWindow, setFloatWindow] = useState(null)
+  const [isRemoteEnabled, setIsRemoteEnabled] = useState(false)
+  const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false)
+
+  // Cues are identified by id wherever they move around (phone edits, live
+  // inserts), so imported lists that never had one get one here.
+  useEffect(() => {
+    if (cues.some((cue) => cue.id === undefined || cue.id === null)) {
+      setCues(cues.map((cue, i) => (cue.id != null ? cue : { ...cue, id: `cue-${Date.now()}-${i}` })))
+    }
+  }, [cues])
+
+  const activeCueId = currentCueIndex !== null ? cues[currentCueIndex]?.id : null
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -41,10 +63,12 @@ function App() {
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
+  // Keyed on the cue itself, not its position: reordering the list around the
+  // running cue must not restart its clock.
   useEffect(() => {
     setElapsed(0)
     setTimeAdjustment(0)
-  }, [currentCueIndex])
+  }, [activeCueId])
 
   useEffect(() => {
     if (!isPresenting || !isRunning) return
@@ -151,44 +175,26 @@ function App() {
     }
   }
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  const getCueDuration = () => {
-    if (currentCueIndex === null || !cues[currentCueIndex]) return 0
-    return Math.max(0, cues[currentCueIndex].seconds + timeAdjustment)
-  }
+  const getCueDuration = () => cueDuration(cues[currentCueIndex], timeAdjustment)
 
   const getDisplayTime = () => {
     if (currentCueIndex === null || !cues[currentCueIndex]) return 0
-    const duration = getCueDuration()
-    const isOvertime = elapsed >= duration
-    if (isOvertime) {
-      return elapsed - duration
-    }
-    return showTimeRemaining ? duration - elapsed : elapsed
+    return displayTime(elapsed, getCueDuration(), showTimeRemaining)
   }
 
   const getTimeColor = () => {
     if (currentCueIndex === null || !cues[currentCueIndex]) return '#FFFFFF'
-    const duration = getCueDuration()
-    if (elapsed >= duration) return '#FF5252'
-    const remainingPercent = (getDisplayTime() / duration) * 100
-    if (remainingPercent > 50) return '#FFFFFF'
-    if (remainingPercent > 25) return '#FFB74D'
-    return '#FF5252'
+    return timeColor(elapsed, getCueDuration())
   }
 
-  const parseTimeInput = (input) => {
-    const parts = (input || '').trim().split(':')
-    if (parts.length !== 2) return null
-    const mins = parseInt(parts[0], 10)
-    const secs = parseInt(parts[1], 10)
-    if (isNaN(mins) || isNaN(secs) || mins < 0 || secs < 0 || secs >= 60) return null
-    return Math.max(1, mins * 60 + secs)
+  // Every path that changes the cue list mid-show goes through here, so the
+  // popup window and its reload copy never fall behind.
+  const publishCues = (nextCues, index) => {
+    setCues(nextCues)
+    sessionStorage.setItem('presentationCues', JSON.stringify(nextCues))
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'CUES_UPDATED', cues: nextCues, index }, '*')
+    }
   }
 
   const addLiveCue = (position) => {
@@ -205,13 +211,7 @@ function App() {
     const insertIndex = position === 'next' ? currentCueIndex + 1 : cues.length
     const updated = [...cues]
     updated.splice(insertIndex, 0, newCue)
-    setCues(updated)
-    // Keep the popup's own copy current in case it is reloaded.
-    sessionStorage.setItem('presentationCues', JSON.stringify(updated))
-
-    if (timerWindow && !timerWindow.closed) {
-      timerWindow.postMessage({ type: 'CUES_UPDATED', cues: updated, index: currentCueIndex }, '*')
-    }
+    publishCues(updated, currentCueIndex)
 
     setLiveCueTitle('')
     setLiveCueSpeaker('')
@@ -229,13 +229,20 @@ function App() {
     }
   }
 
-  const sendMessage = () => {
-    if (messageText.trim() && timerWindow && !timerWindow.closed) {
-      timerWindow.postMessage({ type: 'MESSAGE', text: messageText }, '*')
-      setCurrentMessage(messageText)
-      setMessageText('')
-      setIsMessageVisibleOnTimer(true)
+  const pushMessage = (text) => {
+    const trimmed = (text || '').trim()
+    if (!trimmed) return
+    setCurrentMessage(trimmed)
+    setIsMessageVisibleOnTimer(true)
+    if (timerWindow && !timerWindow.closed) {
+      timerWindow.postMessage({ type: 'MESSAGE', text: trimmed }, '*')
     }
+  }
+
+  const sendMessage = () => {
+    if (!messageText.trim()) return
+    pushMessage(messageText)
+    setMessageText('')
   }
 
   const toggleMessageVisibility = () => {
@@ -269,13 +276,7 @@ function App() {
     setMessages(messages.filter((_, i) => i !== index))
   }
 
-  const usePrePopulatedMessage = (message) => {
-    if (timerWindow && !timerWindow.closed) {
-      timerWindow.postMessage({ type: 'MESSAGE', text: message }, '*')
-      setCurrentMessage(message)
-      setIsMessageVisibleOnTimer(true)
-    }
-  }
+  const sendQuickMessage = (message) => pushMessage(message)
 
   const toggleTimer = () => {
     const newState = !isRunning
@@ -283,6 +284,91 @@ function App() {
     if (timerWindow && !timerWindow.closed) {
       timerWindow.postMessage({ type: 'TOGGLE_TIMER', isRunning: newState }, '*')
     }
+  }
+
+  // A phone can reorder, edit or delete cues, so the running cue is tracked by
+  // id and the index follows it to wherever it ended up in the new list.
+  const applyRemoteCues = (nextCues) => {
+    if (!Array.isArray(nextCues)) return
+    if (isPresenting && nextCues.length === 0) return
+
+    const withIds = nextCues.map((cue, i) =>
+      cue.id != null ? cue : { ...cue, id: `cue-${Date.now()}-${i}` }
+    )
+
+    let nextIndex = currentCueIndex
+    if (isPresenting && currentCueIndex !== null) {
+      const movedTo = withIds.findIndex((cue) => cue.id === activeCueId)
+      nextIndex = movedTo !== -1 ? movedTo : Math.min(currentCueIndex, withIds.length - 1)
+      if (nextIndex !== currentCueIndex) setCurrentCueIndex(nextIndex)
+    }
+
+    publishCues(withIds, nextIndex)
+  }
+
+  const handleRemoteCommand = (command) => {
+    switch (command?.type) {
+      case 'TOGGLE_TIMER':
+        return toggleTimer()
+      case 'NEXT_CUE':
+        return moveToNextCue()
+      case 'PREV_CUE':
+        return moveToPreviousCue()
+      case 'JUMP_CUE':
+        return jumpToCue(command.index)
+      case 'ADJUST_TIME':
+        return adjustTime(command.delta)
+      case 'SEND_MESSAGE':
+        return pushMessage(command.text)
+      case 'CLEAR_MESSAGE':
+        return dismissMessage()
+      case 'SET_CUES':
+        return applyRemoteCues(command.cues)
+      default:
+        return undefined
+    }
+  }
+
+  const remoteState = useMemo(
+    () => ({
+      cues,
+      currentCueIndex,
+      isPresenting,
+      elapsed,
+      isRunning,
+      timeAdjustment,
+      showTimeRemaining,
+      messages,
+      currentMessage: isMessageVisibleOnTimer ? currentMessage : '',
+    }),
+    [
+      cues,
+      currentCueIndex,
+      isPresenting,
+      elapsed,
+      isRunning,
+      timeAdjustment,
+      showTimeRemaining,
+      messages,
+      currentMessage,
+      isMessageVisibleOnTimer,
+    ]
+  )
+
+  const remote = useRemoteHost({
+    enabled: isRemoteEnabled,
+    state: remoteState,
+    onCommand: handleRemoteCommand,
+  })
+
+  const openRemotePanel = () => {
+    setIsRemoteEnabled(true)
+    setIsRemotePanelOpen(true)
+  }
+
+  const stopRemote = () => {
+    setIsRemoteEnabled(false)
+    setIsRemotePanelOpen(false)
   }
 
   const exportCues = () => {
@@ -346,6 +432,15 @@ function App() {
             )}
           </div>
           <div className="header-actions">
+            <button
+              onClick={openRemotePanel}
+              className="btn-header-action"
+              title="Control the show from a phone by scanning a QR code"
+            >
+              {isRemoteEnabled && <span className={`header-remote-dot status-${remote.status}`} />}
+              Phone Remote
+              {remote.remoteCount > 0 ? ` (${remote.remoteCount})` : ''}
+            </button>
             {isPresenting ? (
               <>
                 <button
@@ -597,7 +692,7 @@ function App() {
                       {messages.map((msg, index) => (
                         <button
                           key={index}
-                          onClick={() => usePrePopulatedMessage(msg)}
+                          onClick={() => sendQuickMessage(msg)}
                           className="btn-prepop-message"
                           title={msg}
                         >
@@ -678,6 +773,17 @@ function App() {
         </div>
       </div>
 
+      {isRemotePanelOpen && (
+        <RemotePanel
+          peerId={remote.peerId}
+          status={remote.status}
+          error={remote.error}
+          remoteCount={remote.remoteCount}
+          onClose={() => setIsRemotePanelOpen(false)}
+          onStop={stopRemote}
+        />
+      )}
+
       {floatWindow &&
         createPortal(
           <FloatingTimer
@@ -685,7 +791,7 @@ function App() {
             speaker={cues[currentCueIndex]?.speaker || ''}
             time={(elapsed >= getCueDuration() ? '+' : '') + formatTime(getDisplayTime())}
             color={getTimeColor()}
-            progress={getCueDuration() > 0 ? Math.min(100, (elapsed / getCueDuration()) * 100) : 100}
+            progress={getProgress(elapsed, getCueDuration())}
             nextCue={cues[currentCueIndex + 1]?.title || ''}
             message={isMessageVisibleOnTimer ? currentMessage : ''}
             isRunning={isRunning}

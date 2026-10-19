@@ -11,6 +11,7 @@ A modern, real-time presentation timer for managing cues and speaker times durin
 - **Time Display Modes**: Toggle between remaining time and elapsed time
 - **Cue Navigation**: Jump between cues, move forward/backward, pause/resume
 - **Float Over Slides**: Always-on-top mini timer that sits over PowerPoint presenter view
+- **Phone Remote**: Scan a QR code to drive the show and edit the cue list from a phone
 - **Import/Export**: Save and load cue lists as JSON for reuse
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
@@ -92,6 +93,30 @@ Notes:
   timer can sit above it. Presenter view on the laptop screen with the slideshow on the second
   display works as expected.
 
+### Phone Remote
+
+Click **Phone Remote** on the dashboard and scan the QR code with a phone. The phone opens a
+remote with two tabs:
+
+- **Control**: the live clock, play/pause, previous/next, the `±1/5/10` minute adjustments,
+  and messages to the speaker (free text or saved quick messages).
+- **Cues**: the full cue list — tap a cue to jump to it, edit its title, speaker and time,
+  reorder, delete, or add new cues. The cue running right now cannot be deleted.
+
+Notes:
+
+- The phone talks directly to the dashboard browser over WebRTC, brokered by the free public
+  PeerJS signalling server. Nothing is stored on a server, but the broker has to be reachable:
+  some corporate and venue networks block it, in which case the panel reports a failed
+  connection and a phone hotspot is the quickest fallback.
+- Keep the dashboard tab open — it holds the show state and the phone is only a remote.
+- Anyone with the link can control the show. Use **Stop Remote** in the panel to end the
+  session; the next session issues a new QR code.
+- If the phone sleeps or changes network, it reconnects on its own. While it is offline the
+  screen dims and a banner appears so stale readings are obvious.
+- Starting and ending the presentation stays on the computer, since opening the timer window
+  needs a click there.
+
 ### Overtime Tracking
 
 - When a cue's time expires, the timer automatically switches to counting **up**
@@ -110,16 +135,17 @@ Notes:
 ## Architecture
 
 - **Framework**: React 19 with Vite
+- **Phone remote**: PeerJS (WebRTC data channel) + qrcode, both loaded on demand
 - **Styling**: CSS3 with responsive design
 - **State Management**: React hooks (useState, useEffect)
 - **Build Tool**: Vite for fast development and optimized production builds
 
 ## Browser Support
 
-- Chrome/Edge 90+
+- Chrome/Edge 90+ (116+ for the floating always-on-top timer)
 - Firefox 88+
 - Safari 14+
-- Mobile browsers (iOS Safari, Chrome Mobile)
+- Mobile browsers (iOS Safari, Chrome Mobile) — enough for the phone remote, which needs WebRTC
 
 ## File Structure
 
@@ -129,12 +155,23 @@ presentation-timer/
 │   ├── components/
 │   │   ├── CueListEditor.jsx    # Cue management UI
 │   │   ├── CueListEditor.css
-│   │   ├── Timer.jsx             # Presentation timer view
+│   │   ├── FloatingTimer.jsx    # Always-on-top mini timer (picture-in-picture)
+│   │   ├── FloatingTimer.css
+│   │   ├── RemotePanel.jsx      # QR code + session status on the dashboard
+│   │   ├── RemotePanel.css
+│   │   ├── RemoteControl.jsx    # The phone remote itself
+│   │   ├── RemoteControl.css
+│   │   ├── Timer.jsx            # Presentation timer view
 │   │   └── Timer.css
-│   ├── App.jsx                   # Main app component
+│   ├── hooks/
+│   │   └── useRemoteHost.js     # WebRTC session the phone remotes connect to
+│   ├── utils/
+│   │   ├── runsheetParser.js    # .docx runsheet import
+│   │   └── timerDisplay.js      # Shared clock formatting and colour rules
+│   ├── App.jsx                  # Main app component
 │   ├── App.css
-│   ├── main.jsx                  # Entry point
-│   └── index.css                 # Global styles
+│   ├── main.jsx                 # Entry point (dashboard, or remote via ?remote=)
+│   └── index.css                # Global styles
 ├── index.html
 ├── vite.config.js
 ├── package.json

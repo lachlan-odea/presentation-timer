@@ -1127,3 +1127,26 @@
   background: #5A5A5A;
   color: #1A1A1A;
 }
+
+.header-remote-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: #5A5A5A;
+}
+
+.header-remote-dot.status-ready {
+  background: #7BC67B;
+  box-shadow: 0 0 6px rgba(123, 198, 123, 0.6);
+}
+
+.header-remote-dot.status-connecting {
+  background: #FFB74D;
+}
+
+.header-remote-dot.status-error {
+  background: #FF5252;
+}
