@@ -1,27 +1,86 @@
 // A phone on mobile data and a laptop on office Wi-Fi are usually both behind
-// NATs that STUN alone can't punch through, which is the common reason a remote
-// reaches the broker but never opens a channel. TURN relays those cases.
-// The relay is a free public one: best effort, no account, and only used when a
-// direct route can't be found.
+// NATs that STUN alone can't punch through, which is why a remote can reach the
+// broker, find the host, and still never open a channel. Crossing that needs a
+// TURN relay.
+//
+// The default below is a free public relay — no account, best effort, and it
+// has moved host before (the old openrelay.metered.ca now resolves to a
+// blackhole address). For a relay you control, set these at build time:
+//
+//   VITE_TURN_URLS="turn:your.host:3478,turns:your.host:5349"
+//   VITE_TURN_USERNAME="..."
+//   VITE_TURN_CREDENTIAL="..."
+//
+// Metered, ExpressTURN and Cloudflare all have free tiers that take minutes to
+// set up, and a relay of your own is the only way to make a phone on mobile
+// data reliable.
+const TURN_URLS = (
+  import.meta.env.VITE_TURN_URLS ||
+  'turn:staticauth.openrelay.metered.ca:80,turn:staticauth.openrelay.metered.ca:443,turns:staticauth.openrelay.metered.ca:443?transport=tcp'
+)
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean)
+
+export const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+  {
+    urls: TURN_URLS,
+    username: import.meta.env.VITE_TURN_USERNAME || 'openrelayproject',
+    credential: import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject',
+  },
+]
+
 export const PEER_OPTIONS = {
   debug: 1,
-  config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' },
-      {
-        urls: [
-          'turn:openrelay.metered.ca:80',
-          'turn:openrelay.metered.ca:443',
-          'turns:openrelay.metered.ca:443?transport=tcp',
-        ],
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      },
-    ],
-    iceCandidatePoolSize: 4,
-  },
+  config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 4 },
+}
+
+/**
+ * Asks the browser to gather relay-only candidates, which answers the question
+ * that matters before a show: can a phone that isn't on this network connect at
+ * all, or only one sharing the Wi-Fi? Resolves 'relay', 'none' or 'unsupported'.
+ */
+export function probeRelay(timeout = 7000) {
+  return new Promise((resolve) => {
+    if (!supportsWebRTC) return resolve('unsupported')
+
+    let pc
+    try {
+      pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay' })
+    } catch {
+      return resolve('none')
+    }
+
+    const finish = (result) => {
+      clearTimeout(timer)
+      try {
+        pc.close()
+      } catch {
+        // already closed
+      }
+      resolve(result)
+    }
+
+    const timer = setTimeout(() => finish('none'), timeout)
+
+    pc.onicecandidate = (event) => {
+      const candidate = event.candidate
+      if (!candidate) return
+      if (candidate.type === 'relay' || / typ relay /.test(candidate.candidate)) finish('relay')
+    }
+
+    try {
+      pc.createDataChannel('probe')
+      pc.createOffer()
+        .then((offer) => pc.setLocalDescription(offer))
+        .catch(() => finish('none'))
+    } catch {
+      finish('none')
+    }
+  })
 }
 
 export const supportsWebRTC =

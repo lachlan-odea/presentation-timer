@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react'
 import './RemotePanel.css'
+import { probeRelay } from '../utils/peerConfig'
 
 function RemotePanel({ peerId, status, error, remoteCount, onClose, onStop }) {
   const [qr, setQr] = useState('')
   const [copied, setCopied] = useState(false)
+  const [relay, setRelay] = useState('checking')
+
+  useEffect(() => {
+    let cancelled = false
+    probeRelay().then((result) => !cancelled && setRelay(result))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const remoteUrl = peerId
     ? `${window.location.origin}${import.meta.env.BASE_URL}?remote=${peerId}`
@@ -103,6 +113,26 @@ function RemotePanel({ peerId, status, error, remoteCount, onClose, onStop }) {
             block. Try a different network or a phone hotspot.
           </p>
         )}
+
+        <div className="remote-reach">
+          {relay === 'checking' && <span className="remote-reach-line">Checking reach…</span>}
+          {relay === 'relay' && (
+            <span className="remote-reach-line reach-ok">
+              Relay available — a phone on mobile data can connect.
+            </span>
+          )}
+          {relay === 'none' && (
+            <span className="remote-reach-line reach-limited">
+              Direct connections only — no relay is reachable from this network, so the phone
+              must be on the same Wi-Fi as this computer.
+            </span>
+          )}
+          {relay === 'unsupported' && (
+            <span className="remote-reach-line reach-limited">
+              This browser has no WebRTC, so the remote cannot run here.
+            </span>
+          )}
+        </div>
 
         <div className="remote-panel-footer">
           <button onClick={onStop} className="btn-stop-remote">

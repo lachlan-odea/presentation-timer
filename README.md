@@ -106,8 +106,8 @@ remote with two tabs:
 Notes:
 
 - Both devices on the same Wi-Fi is the most reliable setup. A phone on mobile data with the
-  computer on office Wi-Fi has to be relayed through a free public TURN server, which is best
-  effort — if the remote keeps retrying, join the phone to the same network.
+  computer on office Wi-Fi has to be relayed through a TURN server, and the default is a free
+  public one — best effort, and the panel says whether it is actually reachable.
 - The phone talks directly to the dashboard browser over WebRTC, brokered by the free public
   PeerJS signalling server. Nothing is stored on a server, but the broker has to be reachable:
   some corporate and venue networks block it, in which case the panel reports a failed
@@ -120,6 +120,30 @@ Notes:
   obvious, and the reason for the failure is shown on the phone.
 - Starting and ending the presentation stays on the computer, since opening the timer window
   needs a click there.
+
+#### If a phone won't connect
+
+The Phone Remote panel reports what it can reach, and the phone shows why each attempt failed.
+Match the message:
+
+| What you see | What it means |
+| --- | --- |
+| Panel: *Direct connections only* | No TURN relay is reachable. Put the phone on the same Wi-Fi as the computer, or configure your own relay (below). |
+| Phone: *Reached the pairing server but couldn't open a link* | Signalling worked and the host was found, but no network path exists between the two devices — the same relay problem. |
+| Phone: *That session isn't open any more* | The dashboard reloaded or the remote was stopped. Reopen Phone Remote and scan the new code. |
+| Phone: *Can't reach the pairing server* | The network blocks the PeerJS broker. Try another network or a hotspot. |
+
+The most reliable fix for a phone on mobile data is your own TURN relay. Metered, ExpressTURN
+and Cloudflare all have free tiers; set the credentials at build time and rebuild:
+
+```bash
+VITE_TURN_URLS="turn:your.host:3478,turns:your.host:5349"
+VITE_TURN_USERNAME="username"
+VITE_TURN_CREDENTIAL="credential"
+```
+
+Failing that, having the computer join the phone's hotspot puts both devices on one network,
+where no relay is needed at all.
 
 ### Overtime Tracking
 

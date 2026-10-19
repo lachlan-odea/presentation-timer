@@ -195,3 +195,23 @@
   font-size: 12px;
   line-height: 1.5;
 }
+
+.remote-reach {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #2A2A2A;
+}
+
+.remote-reach-line {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #8A8A8A;
+}
+
+.remote-reach-line.reach-ok {
+  color: #A5D6A7;
+}
+
+.remote-reach-line.reach-limited {
+  color: #FFCC80;
+}
