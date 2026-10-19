@@ -105,6 +105,9 @@ remote with two tabs:
 
 Notes:
 
+- Both devices on the same Wi-Fi is the most reliable setup. A phone on mobile data with the
+  computer on office Wi-Fi has to be relayed through a free public TURN server, which is best
+  effort — if the remote keeps retrying, join the phone to the same network.
 - The phone talks directly to the dashboard browser over WebRTC, brokered by the free public
   PeerJS signalling server. Nothing is stored on a server, but the broker has to be reachable:
   some corporate and venue networks block it, in which case the panel reports a failed
@@ -112,8 +115,9 @@ Notes:
 - Keep the dashboard tab open — it holds the show state and the phone is only a remote.
 - Anyone with the link can control the show. Use **Stop Remote** in the panel to end the
   session; the next session issues a new QR code.
-- If the phone sleeps or changes network, it reconnects on its own. While it is offline the
-  screen dims and a banner appears so stale readings are obvious.
+- If the phone sleeps or changes network, it reconnects on its own, backing off between
+  attempts. While it is offline the screen dims and a banner appears so stale readings are
+  obvious, and the reason for the failure is shown on the phone.
 - Starting and ending the presentation stays on the computer, since opening the timer window
   needs a click there.
 

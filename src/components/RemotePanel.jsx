@@ -9,6 +9,10 @@ function RemotePanel({ peerId, status, error, remoteCount, onClose, onStop }) {
     ? `${window.location.origin}${import.meta.env.BASE_URL}?remote=${peerId}`
     : ''
 
+  // A QR pointing at localhost resolves to the phone itself, so the page never
+  // even loads — worth saying before someone blames the pairing.
+  const isLocalOnly = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+
   useEffect(() => {
     if (!remoteUrl) return
     let cancelled = false
@@ -65,6 +69,13 @@ function RemotePanel({ peerId, status, error, remoteCount, onClose, onStop }) {
           Scan with a phone camera to open the remote. Keep this tab open — the phone talks
           straight to this browser.
         </p>
+
+        {isLocalOnly && (
+          <p className="remote-warning">
+            This page is running on localhost, so the QR code points at the phone itself and
+            won't load. Open the published site to pair a phone.
+          </p>
+        )}
 
         {remoteUrl && (
           <div className="remote-link-row">

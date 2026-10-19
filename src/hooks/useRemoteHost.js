@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PEER_OPTIONS, describePeerError, supportsWebRTC } from '../utils/peerConfig'
 
 // Characters that can't be confused with each other when read off a screen.
 const ID_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
@@ -44,6 +45,12 @@ export function useRemoteHost({ enabled, state, onCommand }) {
   useEffect(() => {
     if (!enabled) return
 
+    if (!supportsWebRTC) {
+      setStatus('error')
+      setError('This browser does not support WebRTC, which the phone remote needs.')
+      return
+    }
+
     let cancelled = false
     let peer = null
     const connections = connectionsRef.current
@@ -55,7 +62,7 @@ export function useRemoteHost({ enabled, state, onCommand }) {
       .then(({ default: Peer }) => {
         if (cancelled) return
 
-        peer = new Peer(`ptimer-${randomId()}`)
+        peer = new Peer(`ptimer-${randomId()}`, PEER_OPTIONS)
 
         peer.on('open', (id) => {
           if (cancelled) return
@@ -81,7 +88,7 @@ export function useRemoteHost({ enabled, state, onCommand }) {
 
         peer.on('error', (err) => {
           if (cancelled) return
-          setError(err.message || String(err))
+          setError(describePeerError(err.type, err.message))
           if (FATAL_ERRORS.includes(err.type)) setStatus('error')
         })
       })

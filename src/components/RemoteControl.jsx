@@ -8,11 +8,16 @@ import {
   getTimeColor,
   parseTimeInput,
 } from '../utils/timerDisplay'
+import { PEER_OPTIONS, describePeerError, supportsWebRTC } from '../utils/peerConfig'
 
-const RETRY_DELAY = 2500
+// Backs off so a phone that can't reach the host doesn't hammer the broker,
+// which would get it rate-limited and make the failure permanent.
+const RETRY_DELAYS = [2000, 4000, 8000, 15000]
 
 function RemoteControl({ hostId }) {
   const [status, setStatus] = useState('connecting')
+  const [failure, setFailure] = useState('')
+  const [attempts, setAttempts] = useState(0)
   const [show, setShow] = useState(null)
   const [tab, setTab] = useState('control')
   const [messageDraft, setMessageDraft] = useState('')
@@ -23,19 +28,28 @@ function RemoteControl({ hostId }) {
   const connRef = useRef(null)
 
   useEffect(() => {
+    if (!supportsWebRTC) {
+      setStatus('unsupported')
+      setFailure('This browser can’t do WebRTC, which the remote needs. Try Safari or Chrome.')
+      return
+    }
+
     let cancelled = false
     let peer = null
     let retryTimer = null
+    let attempt = 0
 
     const connect = async () => {
       const { default: Peer } = await import('peerjs')
       if (cancelled) return
 
+      attempt += 1
+      setAttempts(attempt)
       setStatus((prev) => (prev === 'connected' ? prev : 'connecting'))
 
       // Held locally as well as in `peer`, so a callback that fires after this
       // attempt has been replaced can tell that it is stale and bow out.
-      const instance = new Peer()
+      const instance = new Peer(PEER_OPTIONS)
       peer = instance
 
       const isStale = () => cancelled || peer !== instance
@@ -45,30 +59,38 @@ function RemoteControl({ hostId }) {
         const conn = instance.connect(hostId, { reliable: true })
         connRef.current = conn
 
-        conn.on('open', () => !isStale() && setStatus('connected'))
+        conn.on('open', () => {
+          if (isStale()) return
+          attempt = 0
+          setFailure('')
+          setStatus('connected')
+        })
         conn.on('data', (message) => {
           if (!isStale() && message?.type === 'STATE') setShow(message.state)
         })
         conn.on('close', () => !isStale() && retry())
-        conn.on('error', () => !isStale() && retry())
+        conn.on('error', (err) => !isStale() && retry(err))
       })
 
-      instance.on('error', () => !isStale() && retry())
+      instance.on('error', (err) => !isStale() && retry(err))
       instance.on('disconnected', () => !isStale() && retry())
     }
 
     // The phone drops the connection whenever it sleeps or changes network, so
-    // the remote keeps dialling the host back until the tab is closed.
-    const retry = () => {
+    // the remote keeps dialling the host back until the tab is closed, saying
+    // why each attempt failed rather than spinning silently.
+    const retry = (err) => {
       if (cancelled || retryTimer) return
+      if (err) setFailure(describePeerError(err.type, err.message))
       setStatus('reconnecting')
       connRef.current = null
       peer?.destroy()
       peer = null
+      const delay = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)]
       retryTimer = setTimeout(() => {
         retryTimer = null
         connect()
-      }, RETRY_DELAY)
+      }, delay)
     }
 
     const onVisible = () => {
@@ -99,10 +121,32 @@ function RemoteControl({ hostId }) {
       <div className="remote">
         <div className="remote-waiting">
           <span className={`conn-dot conn-${status}`} />
-          <p>{status === 'connecting' ? 'Connecting to the dashboard…' : 'Reconnecting…'}</p>
-          <p className="remote-waiting-hint">
-            Keep the dashboard tab open on the presenting computer.
+          <p>
+            {status === 'unsupported'
+              ? 'Remote unavailable'
+              : status === 'connecting'
+                ? 'Connecting to the dashboard…'
+                : `Still trying… (attempt ${attempts})`}
           </p>
+
+          {failure ? (
+            <p className="remote-failure">{failure}</p>
+          ) : (
+            <p className="remote-waiting-hint">
+              Keep the dashboard tab open on the presenting computer.
+            </p>
+          )}
+
+          {status !== 'unsupported' && (
+            <>
+              <button onClick={() => window.location.reload()} className="btn-remote-primary">
+                Try again
+              </button>
+              <p className="remote-waiting-hint">
+                Session <code>{hostId}</code>
+              </p>
+            </>
+          )}
         </div>
       </div>
     )
@@ -217,6 +261,7 @@ function RemoteControl({ hostId }) {
       {!isLive && (
         <div className="remote-offline-banner">
           Lost the dashboard — reconnecting. Controls won't take effect until the dot turns green.
+          {failure && <span className="remote-offline-reason">{failure}</span>}
         </div>
       )}
 

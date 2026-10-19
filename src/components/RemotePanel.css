@@ -184,3 +184,14 @@
 .remote-panel-footer .remote-hint {
   margin-top: 10px;
 }
+
+.remote-warning {
+  margin: 12px 0 0 0;
+  padding: 10px 12px;
+  border: 1px solid #6A5A3A;
+  border-radius: 6px;
+  background: rgba(255, 183, 77, 0.1);
+  color: #FFE082;
+  font-size: 12px;
+  line-height: 1.5;
+}
